@@ -1,0 +1,754 @@
+// ============================================================
+// Data Store - localStorage persistence & Supabase cloud sync
+// ============================================================
+import { uuid, monthKey, todayISO } from './utils.js';
+import { supabase } from './supabase.js';
+
+const STORAGE_KEY = 'flujoDeCaja_data';
+const SEED_VERSION_KEY = 'flujoDeCaja_seedVersion';
+const CURRENT_SEED_VERSION = 6; // Bump this to force re-import of seed data
+
+/**
+ * Internal data structure (localStorage Cache):
+ * {
+ *   expenses: { "YYYY-MM": [ { id, date, concept, amount, type }, ... ] },
+ *   incomes:  { "YYYY-MM": [ { id, date, company, amount, notes }, ... ] }
+ * }
+ */
+
+// ── DATABASE MAPPERS (camelCase to snake_case & vice-versa) ──
+
+function mapExpenseToDB(exp, userId) {
+  return {
+    id: exp.id,
+    user_id: userId,
+    date: exp.date,
+    concept: exp.concept,
+    amount: exp.amount,
+    amount_bs: exp.amountBs || 0,
+    exchange_rate: exp.exchangeRate || 0,
+    type: exp.type || 'variable',
+    notes: exp.notes || ''
+  };
+}
+
+function mapExpenseFromDB(db) {
+  return {
+    id: db.id,
+    date: db.date,
+    concept: db.concept,
+    amount: parseFloat(db.amount || 0),
+    amountBs: parseFloat(db.amount_bs || 0),
+    exchangeRate: parseFloat(db.exchange_rate || 0),
+    type: db.type || 'variable',
+    notes: db.notes || ''
+  };
+}
+
+function mapIncomeToDB(inc, userId) {
+  return {
+    id: inc.id,
+    user_id: userId,
+    date: inc.date,
+    company: inc.company,
+    amount: inc.amount,
+    amount_bs: inc.amountBs || 0,
+    exchange_rate: inc.exchangeRate || 0,
+    notes: inc.notes || '',
+    commission_active: !!inc.commissionActive,
+    commission_recipient: inc.commissionRecipient || '',
+    commission_status: inc.commissionStatus || 'pendiente',
+    commission_amount: inc.commissionAmount || 0,
+    commission_pct: inc.commissionPct || 0
+  };
+}
+
+function mapIncomeFromDB(db) {
+  return {
+    id: db.id,
+    date: db.date,
+    company: db.company,
+    amount: parseFloat(db.amount || 0),
+    amountBs: parseFloat(db.amount_bs || 0),
+    exchangeRate: parseFloat(db.exchange_rate || 0),
+    notes: db.notes || '',
+    commissionActive: !!db.commission_active,
+    commissionRecipient: db.commission_recipient || '',
+    commissionStatus: db.commission_status || 'pendiente',
+    commissionAmount: parseFloat(db.commission_amount || 0),
+    commissionPct: parseFloat(db.commission_pct || 0)
+  };
+}
+
+// ── SUPABASE CLOUD SYNC OPERATIONS ──
+
+/**
+ * Downloads and rebuilds the local cache using data fetched from Supabase tables
+ */
+export async function syncWithSupabase() {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return false;
+
+    const userId = session.user.id;
+
+    // 1. Fetch incomes
+    const { data: dbIncomes, error: incError } = await supabase
+      .from('incomes')
+      .select('*')
+      .eq('user_id', userId);
+
+    if (incError) {
+      console.error('Error syncing incomes:', incError);
+      return false;
+    }
+
+    // 2. Fetch expenses
+    const { data: dbExpenses, error: expError } = await supabase
+      .from('expenses')
+      .select('*')
+      .eq('user_id', userId);
+
+    if (expError) {
+      console.error('Error syncing expenses:', expError);
+      return false;
+    }
+
+    // 3. Clear local storage cache and rebuild
+    const store = { expenses: {}, incomes: {} };
+
+    for (const dbInc of dbIncomes) {
+      const inc = mapIncomeFromDB(dbInc);
+      const [y, m] = inc.date.split('-').map(Number);
+      const key = monthKey(y, m);
+      if (!store.incomes[key]) store.incomes[key] = [];
+      store.incomes[key].push(inc);
+    }
+
+    for (const dbExp of dbExpenses) {
+      const exp = mapExpenseFromDB(dbExp);
+      const [y, m] = exp.date.split('-').map(Number);
+      const key = monthKey(y, m);
+      if (!store.expenses[key]) store.expenses[key] = [];
+      store.expenses[key].push(exp);
+    }
+
+    saveStore(store);
+    return true;
+  } catch (err) {
+    console.error('Failed to sync with Supabase:', err);
+    return false;
+  }
+}
+
+/**
+ * Uploads all pre-existing local data to Supabase database (migration helper)
+ */
+export async function uploadLocalDataToSupabase() {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
+    const userId = session.user.id;
+    const store = getStore();
+
+    // 1. Upload incomes
+    const incomesToUpload = [];
+    for (const incomesList of Object.values(store.incomes)) {
+      for (const inc of incomesList) {
+        incomesToUpload.push(mapIncomeToDB(inc, userId));
+      }
+    }
+
+    if (incomesToUpload.length > 0) {
+      const { error } = await supabase.from('incomes').upsert(incomesToUpload);
+      if (error) console.error('Error uploading local incomes:', error);
+    }
+
+    // 2. Upload expenses
+    const expensesToUpload = [];
+    for (const expensesList of Object.values(store.expenses)) {
+      for (const exp of expensesList) {
+        expensesToUpload.push(mapExpenseToDB(exp, userId));
+      }
+    }
+
+    if (expensesToUpload.length > 0) {
+      const { error } = await supabase.from('expenses').upsert(expensesToUpload);
+      if (error) console.error('Error uploading local expenses:', error);
+    }
+  } catch (err) {
+    console.error('Failed to upload offline data:', err);
+  }
+}
+
+// ── NORMALIZATION HELPERS ──
+
+function normalizeConceptStr(concept) {
+  if (!concept) return '';
+  const trimmed = concept.trim();
+  const lower = trimmed.toLowerCase();
+
+  // 1. Check payroll (Nómina) first using fuzzy includes
+  if (lower.includes('berelitza') || lower.includes('bere')) {
+    return 'Nómina: Berelitza';
+  }
+  if (lower.includes('hortencia')) {
+    return 'Nómina: María Hortencia';
+  }
+  if (lower.includes('romero')) {
+    return 'Nómina: Víctor Romero';
+  }
+
+  // 2. Check Elinor and Victoria
+  if (lower.includes('elinor') || lower.includes('elinar')) {
+    return 'Elinor';
+  }
+  if (lower.includes('victoria')) {
+    return 'Victoria';
+  }
+
+  // 3. Other standardizations
+  if (lower.includes('ariadna')) return 'Ariadna Yoga';
+  if (lower.includes('audio place')) return 'Audio Place';
+  if (lower.includes('dgboss') || lower.includes('dg boss')) return 'DGBoss';
+  if (lower.includes('fondo super viaje')) return 'Fondo Super Viaje';
+  if (lower.includes('gasolina')) return 'Gasolina';
+
+  if (lower === 'inter' || lower === 'internet') return 'Internet';
+  if (lower.includes('internet caracas')) return 'Internet Caracas';
+  if (lower.includes('internet valencia')) return 'Internet Valencia';
+
+  if (lower.includes('luz/agua/cantv') || lower.includes('servicios basicos') || lower.includes('servicios básicos')) {
+    return 'Servicios Básicos';
+  }
+
+  if (lower.includes('navideño') || lower.includes('navideo')) return 'Mercado Navideño';
+  if (lower.includes('navas')) return 'Profesor Navas';
+
+  // Pólizas
+  const isPoliza = lower.includes('póliza') || lower.includes('poliza') || lower.includes('pòliza');
+  if (lower.includes('diana') && isPoliza) return 'Póliza Diana';
+  if (lower.includes('edson') && isPoliza) return 'Póliza Edson';
+  if (lower.includes('rosalicia') && isPoliza) return 'Póliza Rosalicia';
+  if (lower.includes('spark') && isPoliza) return 'Póliza Spark';
+  if (lower.includes('carlos') && isPoliza) return 'Póliza Carlos';
+  if (lower.includes('corolla') && isPoliza) return 'Póliza Corolla';
+  if ((lower.includes('rafa') || lower.includes('rafael')) && isPoliza) return 'Póliza Rafael';
+  
+  if (lower.includes('espe y rafa') || lower.includes('rafa y espe')) return 'Pólizas Rafa y Espe';
+
+  if (lower.includes('ahorro') && lower.includes('extra')) return 'Póliza Ahorro (Extra)';
+  if (lower.includes('ahorro') && lower.includes('x 2')) return 'Póliza Ahorro x 2';
+  if (lower.includes('ahorro') && (isPoliza || lower.includes('de ahorro'))) return 'Póliza Ahorro';
+
+  if (lower.includes('reparación spark') || lower.includes('reparacion spark')) return 'Reparación Spark';
+
+  if (lower.includes('sra') || lower.includes('maria') || lower.includes('marìa')) {
+    return 'Sra. María';
+  }
+
+  if (lower === 'mercado') return 'Mercado';
+
+  return trimmed;
+}
+
+function normalizeCompanyStr(company) {
+  if (!company) return '';
+  const trimmed = company.trim();
+  const lower = trimmed.toLowerCase();
+
+  if (lower.includes('caracas')) return 'Caracas';
+  if (lower.includes('constitucion') || lower.includes('constitu')) return 'Constitución';
+  if (lower === 'loyal') return 'Loyal';
+
+  if (lower.includes('mercantil p') || lower.includes('mercantil panam')) {
+    return 'Mercantil Panamá';
+  } else if (lower.includes('mercantil')) {
+    return 'Mercantil';
+  }
+
+  if (lower.includes('oceanica') || lower.includes('oce nica') || lower.includes('oceánica')) {
+    return 'Oceánica';
+  }
+
+  if (lower.includes('olė') || lower.includes('ole') || lower.includes('olé')) {
+    return 'Olé Life';
+  }
+
+  if (lower.includes('universitas')) return 'Universitas';
+
+  if (lower.includes('world medic')) return 'World Medic Assist';
+
+  // Capitalize first letter of other common single words if appropriate
+  if (lower === 'asistensi') return 'Asistensi';
+  if (lower === 'bmi') return 'BMI';
+  if (lower === 'best doctors') return 'Best Doctors';
+  if (lower === 'best travel') return 'Best Travel';
+  if (lower === 'ever') return 'Ever';
+  if (lower === 'gbg') return 'GBG';
+  if (lower === 'hispana') return 'Hispana';
+  if (lower === 'investor trust') return 'Investor Trust';
+  if (lower === 'la internacional') return 'La Internacional';
+  if (lower === 'la mundial') return 'La Mundial';
+  if (lower === 'pirámide' || lower === 'piramide') return 'Pirámide';
+  if (lower === 'planisalud') return 'Planisalud';
+  if (lower === 'proseguros') return 'Proseguros';
+  if (lower === 'qualitas') return 'Qualitas';
+  if (lower === 'red bridge') return 'Red Bridge';
+  if (lower === 'trawick') return 'Trawick';
+  if (lower === 'uniseguros') return 'Uniseguros';
+  if (lower === 'venezuela') return 'Venezuela';
+  if (lower === 'vumi') return 'Vumi';
+
+  return trimmed;
+}
+
+function migrateAndNormalizeStore(store) {
+  let migrated = false;
+  
+  if (store.expenses) {
+    for (const [monthKey, list] of Object.entries(store.expenses)) {
+      for (const e of list) {
+        if (!e.concept) continue;
+        const oldConcept = e.concept;
+        const normalized = normalizeConceptStr(oldConcept);
+        if (normalized !== oldConcept) {
+          e.concept = normalized;
+          migrated = true;
+        }
+      }
+    }
+  }
+
+  if (store.incomes) {
+    for (const [monthKey, list] of Object.entries(store.incomes)) {
+      for (const i of list) {
+        if (!i.company) continue;
+        const oldCompany = i.company;
+        const normalized = normalizeCompanyStr(oldCompany);
+        if (normalized !== oldCompany) {
+          i.company = normalized;
+          migrated = true;
+        }
+      }
+    }
+  }
+
+  return migrated;
+}
+
+function getStore() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const store = JSON.parse(raw);
+      if (migrateAndNormalizeStore(store)) {
+        saveStore(store);
+      }
+      return store;
+    }
+  } catch (e) {
+    console.error('Error reading store:', e);
+  }
+  return { expenses: {}, incomes: {} };
+}
+
+function saveStore(data) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  } catch (e) {
+    console.error('Error saving store:', e);
+  }
+}
+
+/**
+ * Check if the store has any data
+ */
+export function hasData() {
+  const store = getStore();
+  return Object.keys(store.expenses).length > 0 || Object.keys(store.incomes).length > 0;
+}
+
+// ── EXPENSES CRUD ──
+
+export function getExpenses(year, month) {
+  const store = getStore();
+  const key = monthKey(year, month);
+  const items = store.expenses[key] || [];
+  return items.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+}
+
+export function addExpense(year, month, expense) {
+  const store = getStore();
+  const key = monthKey(year, month);
+  if (!store.expenses[key]) store.expenses[key] = [];
+  const entry = { id: uuid(), ...expense };
+  store.expenses[key].push(entry);
+  saveStore(store);
+
+  // Sync to Supabase in background
+  supabase.auth.getSession().then(({ data: { session } }) => {
+    if (session) {
+      const dbRow = mapExpenseToDB(entry, session.user.id);
+      supabase.from('expenses').insert(dbRow).then(({ error }) => {
+        if (error) console.error('Error syncing addExpense:', error);
+      });
+    }
+  });
+
+  return entry;
+}
+
+export function updateExpense(year, month, id, updates) {
+  const store = getStore();
+  const key = monthKey(year, month);
+  const list = store.expenses[key] || [];
+  const idx = list.findIndex(e => e.id === id);
+  if (idx !== -1) {
+    list[idx] = { ...list[idx], ...updates };
+    saveStore(store);
+
+    // Sync to Supabase in background
+    const entry = list[idx];
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        const dbRow = mapExpenseToDB(entry, session.user.id);
+        supabase.from('expenses').upsert(dbRow).then(({ error }) => {
+          if (error) console.error('Error syncing updateExpense:', error);
+        });
+      }
+    });
+
+    return list[idx];
+  }
+  return null;
+}
+
+export function deleteExpense(year, month, id) {
+  const store = getStore();
+  const key = monthKey(year, month);
+  const list = store.expenses[key] || [];
+  store.expenses[key] = list.filter(e => e.id !== id);
+  if (store.expenses[key].length === 0) delete store.expenses[key];
+  saveStore(store);
+
+  // Sync to Supabase in background
+  supabase.auth.getSession().then(({ data: { session } }) => {
+    if (session) {
+      supabase.from('expenses').delete().eq('id', id).then(({ error }) => {
+        if (error) console.error('Error syncing deleteExpense:', error);
+      });
+    }
+  });
+}
+
+// ── INCOMES CRUD ──
+
+export function getIncomes(year, month) {
+  const store = getStore();
+  const key = monthKey(year, month);
+  const items = store.incomes[key] || [];
+  return items.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+}
+
+export function addIncome(year, month, income) {
+  const store = getStore();
+  const key = monthKey(year, month);
+  if (!store.incomes[key]) store.incomes[key] = [];
+  const entry = { id: uuid(), ...income };
+  store.incomes[key].push(entry);
+  saveStore(store);
+
+  // Sync to Supabase in background
+  supabase.auth.getSession().then(({ data: { session } }) => {
+    if (session) {
+      const dbRow = mapIncomeToDB(entry, session.user.id);
+      supabase.from('incomes').insert(dbRow).then(({ error }) => {
+        if (error) console.error('Error syncing addIncome:', error);
+      });
+    }
+  });
+
+  return entry;
+}
+
+export function updateIncome(year, month, id, updates) {
+  const store = getStore();
+  const key = monthKey(year, month);
+  const list = store.incomes[key] || [];
+  const idx = list.findIndex(e => e.id === id);
+  if (idx !== -1) {
+    list[idx] = { ...list[idx], ...updates };
+    saveStore(store);
+
+    // Sync to Supabase in background
+    const entry = list[idx];
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        const dbRow = mapIncomeToDB(entry, session.user.id);
+        supabase.from('incomes').upsert(dbRow).then(({ error }) => {
+          if (error) console.error('Error syncing updateIncome:', error);
+        });
+      }
+    });
+
+    return list[idx];
+  }
+  return null;
+}
+
+export function deleteIncome(year, month, id) {
+  const store = getStore();
+  const key = monthKey(year, month);
+  const list = store.incomes[key] || [];
+  store.incomes[key] = list.filter(e => e.id !== id);
+  if (store.incomes[key].length === 0) delete store.incomes[key];
+  saveStore(store);
+
+  // Sync to Supabase in background
+  supabase.auth.getSession().then(({ data: { session } }) => {
+    if (session) {
+      supabase.from('incomes').delete().eq('id', id).then(({ error }) => {
+        if (error) console.error('Error syncing deleteIncome:', error);
+      });
+    }
+  });
+}
+
+// ── COMMISSIONS ──
+
+export function getPendingCommissions() {
+  const store = getStore();
+  let total = 0;
+  const list = [];
+  for (const [monthKey, incomesList] of Object.entries(store.incomes)) {
+    for (const income of incomesList) {
+      if (income.commissionActive && income.commissionStatus === 'pendiente') {
+        const amt = parseFloat(income.commissionAmount || 0);
+        total += amt;
+        list.push({
+          id: income.id,
+          monthKey: monthKey,
+          date: income.date,
+          company: income.company,
+          recipient: income.commissionRecipient,
+          amount: amt
+        });
+      }
+    }
+  }
+  list.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  return {
+    total,
+    list
+  };
+}
+
+export function getPaidCommissions() {
+  const store = getStore();
+  let total = 0;
+  const list = [];
+  for (const [monthKey, incomesList] of Object.entries(store.incomes)) {
+    for (const income of incomesList) {
+      if (income.commissionActive && income.commissionStatus === 'pagado') {
+        const amt = parseFloat(income.commissionAmount || 0);
+        total += amt;
+        list.push({
+          id: income.id,
+          monthKey: monthKey,
+          date: income.date,
+          company: income.company,
+          recipient: income.commissionRecipient,
+          amount: amt
+        });
+      }
+    }
+  }
+  list.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  return {
+    total,
+    list
+  };
+}
+
+export function payCommission(incomeId, ratePaid) {
+  const store = getStore();
+  let foundIncome = null;
+  let foundMonthKey = null;
+
+  for (const [mKey, incomesList] of Object.entries(store.incomes)) {
+    const idx = incomesList.findIndex(i => i.id === incomeId);
+    if (idx !== -1) {
+      foundIncome = incomesList[idx];
+      foundMonthKey = mKey;
+      break;
+    }
+  }
+
+  if (!foundIncome) {
+    throw new Error('Ingreso no encontrado');
+  }
+
+  foundIncome.commissionStatus = 'pagado';
+  saveStore(store);
+
+  // Sync income update to Supabase in background
+  supabase.auth.getSession().then(({ data: { session } }) => {
+    if (session) {
+      const dbRow = mapIncomeToDB(foundIncome, session.user.id);
+      supabase.from('incomes').upsert(dbRow).then(({ error }) => {
+        if (error) console.error('Error syncing payCommission income update:', error);
+      });
+    }
+  });
+
+  // Add the corresponding expense
+  const today = todayISO();
+  const [y, m] = today.split('-').map(Number);
+  
+  const recipient = foundIncome.commissionRecipient || 'Tercero';
+  const commAmount = parseFloat(foundIncome.commissionAmount || 0);
+  const rate = parseFloat(ratePaid) || 0;
+  const amountBs = commAmount * rate;
+  
+  const expense = {
+    date: today,
+    concept: `Comisiones 3ros (${recipient})`,
+    amount: commAmount,
+    exchangeRate: rate,
+    amountBs: amountBs,
+    type: 'variable',
+    notes: `Pago comisión a ${recipient} por ingreso de ${foundIncome.company}. Tasa: ${rate.toFixed(2)}`
+  };
+
+  addExpense(y, m, expense); // This handles its own Supabase sync in background
+  return foundIncome;
+}
+
+// ── AGGREGATIONS ──
+
+export function getMonthTotals(year, month) {
+  const expenses = getExpenses(year, month);
+  const incomes = getIncomes(year, month);
+
+  const totalExpenses = expenses.reduce((s, e) => s + (e.amount || 0), 0);
+  const totalIncomes = incomes.reduce((s, e) => s + (e.amount || 0), 0);
+  const fixedExpenses = expenses.filter(e => (e.type || '').toLowerCase() === 'fijo')
+    .reduce((s, e) => s + (e.amount || 0), 0);
+  const variableExpenses = expenses.filter(e => (e.type || '').toLowerCase() === 'variable')
+    .reduce((s, e) => s + (e.amount || 0), 0);
+
+  return {
+    totalExpenses,
+    totalIncomes,
+    fixedExpenses,
+    variableExpenses,
+    balance: totalIncomes - totalExpenses,
+    expenseCount: expenses.length,
+    incomeCount: incomes.length
+  };
+}
+
+export function getAllConcepts() {
+  const store = getStore();
+  const concepts = new Set();
+  for (const items of Object.values(store.expenses)) {
+    for (const item of items) {
+      if (item.concept) concepts.add(item.concept);
+    }
+  }
+  return Array.from(concepts).sort();
+}
+
+export function getAllCompanies() {
+  const store = getStore();
+  const companies = new Set();
+  for (const items of Object.values(store.incomes)) {
+    for (const item of items) {
+      if (item.company) companies.add(item.company);
+    }
+  }
+  return Array.from(companies).sort();
+}
+
+export function getExpensesByConceptForMonth(year, month) {
+  const expenses = getExpenses(year, month);
+  const map = {};
+  for (const e of expenses) {
+    let key = e.concept || 'Otro';
+    if (key.startsWith('Nómina')) {
+      key = 'Nómina';
+    } else if (key.startsWith('Póliza')) {
+      key = 'Póliza';
+    } else if (key.startsWith('Comisiones 3ros')) {
+      key = 'Comisiones 3ros';
+    }
+    map[key] = (map[key] || 0) + (e.amount || 0);
+  }
+  return Object.entries(map).sort((a, b) => b[1] - a[1]);
+}
+
+export function getIncomesByCompanyForMonth(year, month) {
+  const incomes = getIncomes(year, month);
+  const map = {};
+  for (const e of incomes) {
+    const key = e.company || 'Otro';
+    map[key] = (map[key] || 0) + (e.amount || 0);
+  }
+  return Object.entries(map).sort((a, b) => b[1] - a[1]);
+}
+
+export function getAvailableMonths() {
+  const store = getStore();
+  const keys = new Set([
+    ...Object.keys(store.expenses),
+    ...Object.keys(store.incomes)
+  ]);
+  return Array.from(keys).sort();
+}
+
+export function getRecentTransactions(year, month, limit = 8) {
+  const expenses = getExpenses(year, month).map(e => ({
+    ...e, _type: 'expense', _label: e.concept
+  }));
+  const incomes = getIncomes(year, month).map(e => ({
+    ...e, _type: 'income', _label: e.company
+  }));
+
+  return [...expenses, ...incomes]
+    .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
+    .slice(0, limit);
+}
+
+// ── IMPORT / EXPORT ──
+
+export async function importData(json) {
+  try {
+    const data = typeof json === 'string' ? JSON.parse(json) : json;
+    if (!data.expenses || !data.incomes) {
+      throw new Error('Formato inválido');
+    }
+    saveStore(data);
+
+    // Sync imported data to Supabase in background
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      const userId = session.user.id;
+      // 1. Wipe remote tables first
+      await supabase.from('incomes').delete().eq('user_id', userId);
+      await supabase.from('expenses').delete().eq('user_id', userId);
+      // 2. Upload the clean backup data
+      await uploadLocalDataToSupabase();
+    }
+    
+    return true;
+  } catch (e) {
+    console.error('Import error:', e);
+    return false;
+  }
+}
+
+export function exportData() {
+  return JSON.stringify(getStore(), null, 2);
+}

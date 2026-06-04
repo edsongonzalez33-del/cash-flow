@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Aplicación de gestión de flujo de caja personal - Controla tus ingresos y gastos mensuales" />
+  <title>Flujo de Caja | Panel de Control</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <!-- ===================== SIDEBAR ===================== -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="1" x2="12" y2="23"></line>
+          <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+        </svg>
+      </div>
+      <div class="brand-text">
+        <h1>Flujo de Caja</h1>
+        <span class="brand-subtitle">Panel de Control</span>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a href="#" class="nav-item active" data-section="dashboard" id="nav-dashboard">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="7" height="7"></rect>
+          <rect x="14" y="3" width="7" height="7"></rect>
+          <rect x="14" y="14" width="7" height="7"></rect>
+          <rect x="3" y="14" width="7" height="7"></rect>
+        </svg>
+        <span>Dashboard</span>
+      </a>
+      <a href="#" class="nav-item" data-section="expenses" id="nav-expenses">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19"></line>
+          <polyline points="19 12 12 19 5 12"></polyline>
+        </svg>
+        <span>Gastos</span>
+      </a>
+      <a href="#" class="nav-item" data-section="incomes" id="nav-incomes">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="19" x2="12" y2="5"></line>
+          <polyline points="5 12 12 5 19 12"></polyline>
+        </svg>
+        <span>Ingresos</span>
+      </a>
+      <a href="#" class="nav-item" id="nav-logout" style="margin-top: auto; color: var(--danger-light);">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+          <polyline points="16 17 21 12 16 7"></polyline>
+          <line x1="21" y1="12" x2="9" y2="12"></line>
+        </svg>
+        <span>Cerrar Sesión</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <button class="btn-sidebar" id="btn-theme-toggle" title="Cambiar tema">
+        <svg class="sun-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="5"></circle>
+          <line x1="12" y1="1" x2="12" y2="3"></line>
+          <line x1="12" y1="21" x2="12" y2="23"></line>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+          <line x1="1" y1="12" x2="3" y2="12"></line>
+          <line x1="21" y1="12" x2="23" y2="12"></line>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+        </svg>
+        <svg class="moon-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+        </svg>
+        <span id="theme-toggle-label">Modo Claro</span>
+      </button>
+      <button class="btn-sidebar" id="btn-import" title="Importar datos">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="7 10 12 15 17 10"></polyline>
+          <line x1="12" y1="15" x2="12" y2="3"></line>
+        </svg>
+        <span>Importar</span>
+      </button>
+      <button class="btn-sidebar" id="btn-export" title="Exportar datos">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="17 8 12 3 7 8"></polyline>
+          <line x1="12" y1="3" x2="12" y2="15"></line>
+        </svg>
+        <span>Exportar</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- Mobile menu toggle -->
+  <button class="mobile-toggle" id="mobile-toggle" aria-label="Abrir menú">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </button>
+
+  <!-- ===================== MAIN CONTENT ===================== -->
+  <main class="main-content">
+
+    <!-- ========== DASHBOARD ========== -->
+    <section class="section active" id="section-dashboard">
+      <div class="section-header">
+        <div>
+          <h2 class="section-title">Dashboard</h2>
+          <p class="section-subtitle">Resumen general de tu flujo de caja</p>
+        </div>
+        <div class="month-selector">
+          <button class="btn-month-nav" id="dash-prev-month" aria-label="Mes anterior">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
+          </button>
+          <span class="month-label" id="dash-month-label">Mayo 2026</span>
+          <button class="btn-month-nav" id="dash-next-month" aria-label="Mes siguiente">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- KPI Cards -->
+      <div class="kpi-grid" id="kpi-grid">
+        <div class="kpi-card kpi-balance">
+          <div class="kpi-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+          </div>
+          <div class="kpi-content">
+            <span class="kpi-label">Saldo del Mes</span>
+            <span class="kpi-value" id="kpi-balance">$0.00</span>
+          </div>
+          <div class="kpi-trend" id="kpi-balance-trend"></div>
+        </div>
+        <div class="kpi-card kpi-income">
+          <div class="kpi-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
+          </div>
+          <div class="kpi-content">
+            <span class="kpi-label">Total Ingresos</span>
+            <span class="kpi-value" id="kpi-income">$0.00</span>
+          </div>
+          <div class="kpi-trend" id="kpi-income-trend"></div>
+        </div>
+        <div class="kpi-card kpi-expense">
+          <div class="kpi-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"></polyline><polyline points="17 18 23 18 23 12"></polyline></svg>
+          </div>
+          <div class="kpi-content">
+            <span class="kpi-label">Total Gastos</span>
+            <span class="kpi-value" id="kpi-expense">$0.00</span>
+          </div>
+          <div class="kpi-trend" id="kpi-expense-trend"></div>
+        </div>
+        <div class="kpi-card kpi-savings">
+          <div class="kpi-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 5c-1.5 0-2.8 1.4-3 2-3.5-1.5-11-.3-11 5 0 1.8 0 3 2 4.5V20h4v-2h3v2h4v-4c1-.5 1.7-1 2-2h2v-4h-2c0-1-.5-1.5-1-2"/><circle cx="16" cy="10" r="1"/></svg>
+          </div>
+          <div class="kpi-content">
+            <span class="kpi-label">Tasa de Ahorro</span>
+            <span class="kpi-value" id="kpi-savings">0%</span>
+          </div>
+          <div class="kpi-trend" id="kpi-savings-trend"></div>
+        </div>
+        <div class="kpi-card kpi-commissions">
+          <div class="kpi-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+          </div>
+          <div class="kpi-content">
+            <span class="kpi-label">Comisiones Pendientes</span>
+            <span class="kpi-value" id="kpi-commissions">$0.00</span>
+          </div>
+          <div class="kpi-trend" id="kpi-commissions-trend">Pendientes de pago</div>
+        </div>
+      </div>
+
+      <!-- Charts Row: Ingresos vs Gastos (Full Width) -->
+      <div class="charts-grid">
+        <div class="chart-card chart-wide" style="grid-column: span 2;">
+          <div class="chart-header">
+            <h3>Ingresos vs Gastos</h3>
+            <span class="chart-period">Últimos 12 meses</span>
+          </div>
+          <div class="chart-body">
+            <canvas id="chart-income-vs-expense"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Second Row: Breakdown Analítico (Gastos por Concepto & Top Compañías) -->
+      <div class="charts-grid" style="margin-top: 20px;">
+        <div class="chart-card">
+          <div class="chart-header">
+            <h3>Gastos por Concepto</h3>
+            <span class="chart-period" id="chart-expense-period">Mayo 2026</span>
+          </div>
+          <div class="chart-body">
+            <canvas id="chart-expenses-breakdown"></canvas>
+          </div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-header">
+            <h3>Top Compañías</h3>
+            <span class="chart-period" id="chart-company-period">Mayo 2026</span>
+          </div>
+          <div class="chart-body">
+            <canvas id="chart-top-companies"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Third Row: Comisiones a Terceros (Full Width) -->
+      <div class="charts-grid" style="margin-top: 20px;">
+        <div class="chart-card chart-wide" style="grid-column: span 2;">
+          <div class="chart-header" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+            <div style="display: flex; align-items: center; gap: 16px;">
+              <h3 style="margin: 0; font-size: 0.95rem;">Comisiones a Terceros</h3>
+              <div class="filter-chips" style="margin: 0; display: flex; gap: 4px;">
+                <button class="chip active" id="btn-tab-pending" style="padding: 2px 10px; font-size: 0.75rem; border-radius: 12px; height: 24px; display: flex; align-items: center;">Pendientes</button>
+                <button class="chip" id="btn-tab-paid" style="padding: 2px 10px; font-size: 0.75rem; border-radius: 12px; height: 24px; display: flex; align-items: center;">Pagadas</button>
+              </div>
+            </div>
+            <span class="chart-period" id="commissions-status-label" style="font-size: 0.75rem; padding: 2px 8px;">Control</span>
+          </div>
+          <div class="chart-body" style="min-height: 250px; padding: 15px; overflow-x: auto;">
+            <div class="commissions-list-container">
+              <table class="data-table" id="commissions-table">
+                <thead>
+                  <tr id="commissions-table-header">
+                    <!-- Injected dynamically -->
+                  </tr>
+                </thead>
+                <tbody id="commissions-tbody">
+                  <tr class="empty-row"><td colspan="5"><p class="empty-state">No hay comisiones pendientes de pago</p></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fourth Row: Distribución de Comisiones & Últimas Transacciones -->
+      <div class="charts-grid" style="margin-top: 20px;">
+        <div class="chart-card">
+          <div class="chart-header">
+            <h3>Distribución de Comisiones Pagadas</h3>
+            <span class="chart-period">Por Beneficiario</span>
+          </div>
+          <div class="chart-body" style="min-height: 250px;">
+            <canvas id="chart-commissions-destinatario"></canvas>
+          </div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-header">
+            <h3>Últimas Transacciones</h3>
+          </div>
+          <div class="chart-body recent-transactions-body">
+            <div class="recent-list" id="recent-transactions">
+              <p class="empty-state">No hay transacciones</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fifth Row: Comparativa de Rendimiento (Full Width) -->
+      <div class="charts-grid" style="margin-top: 20px;">
+        <div class="chart-card chart-wide" style="grid-column: span 2;">
+          <div class="chart-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <h3 style="margin-bottom: 2px; font-size: 1rem;">Comparativa Interanual y Mensual</h3>
+              <p id="performance-compare-sub" style="font-size: 0.8rem; color: var(--text-muted); margin: 0;"></p>
+            </div>
+            <span class="chart-period" id="performance-compare-period">Junio 2026</span>
+          </div>
+          <div class="chart-body" style="min-height: 280px;">
+            <canvas id="chart-performance-compare"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== EXPENSES ========== -->
+    <section class="section" id="section-expenses">
+      <div class="section-header">
+        <div>
+          <h2 class="section-title">Gastos Mensuales</h2>
+          <p class="section-subtitle">Administra tus gastos del mes</p>
+        </div>
+        <div class="section-header-right">
+          <div class="month-selector">
+            <button class="btn-month-nav" id="exp-prev-month" aria-label="Mes anterior">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
+            </button>
+            <span class="month-label" id="exp-month-label">Mayo 2026</span>
+            <button class="btn-month-nav" id="exp-next-month" aria-label="Mes siguiente">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </button>
+          </div>
+          <button class="btn-primary" id="btn-add-expense">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            Nuevo Gasto
+          </button>
+        </div>
+      </div>
+
+      <!-- Expense Summary Cards -->
+      <div class="summary-grid" id="expense-summary">
+        <div class="summary-card">
+          <span class="summary-label">Total del Mes</span>
+          <span class="summary-value text-danger" id="exp-total">$0.00</span>
+        </div>
+        <div class="summary-card">
+          <span class="summary-label">Gastos Fijos</span>
+          <span class="summary-value" id="exp-fixed">$0.00</span>
+        </div>
+        <div class="summary-card">
+          <span class="summary-label">Gastos Variables</span>
+          <span class="summary-value" id="exp-variable">$0.00</span>
+        </div>
+      </div>
+
+      <!-- Filter Bar -->
+      <div class="filter-bar">
+        <div class="filter-group">
+          <label>Filtrar por tipo:</label>
+          <div class="filter-chips" id="expense-type-filter">
+            <button class="chip active" data-filter="all">Todos</button>
+            <button class="chip" data-filter="fijo">Fijos</button>
+            <button class="chip" data-filter="variable">Variables</button>
+          </div>
+        </div>
+        <div class="search-box">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          <input type="text" placeholder="Buscar concepto..." id="expense-search" />
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div class="table-container">
+        <table class="data-table" id="expenses-table">
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Concepto</th>
+              <th class="text-right">Monto ($)</th>
+              <th class="text-right">Monto (Bs.)</th>
+              <th>Tipo</th>
+              <th class="text-center">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="expenses-tbody">
+            <tr class="empty-row"><td colspan="6"><p class="empty-state">No hay gastos registrados para este mes</p></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ========== INCOMES ========== -->
+    <section class="section" id="section-incomes">
+      <div class="section-header">
+        <div>
+          <h2 class="section-title">Ingresos Mensuales</h2>
+          <p class="section-subtitle">Administra tus ingresos del mes</p>
+        </div>
+        <div class="section-header-right">
+          <div class="month-selector">
+            <button class="btn-month-nav" id="inc-prev-month" aria-label="Mes anterior">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
+            </button>
+            <span class="month-label" id="inc-month-label">Mayo 2026</span>
+            <button class="btn-month-nav" id="inc-next-month" aria-label="Mes siguiente">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </button>
+          </div>
+          <button class="btn-primary btn-income" id="btn-add-income">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            Nuevo Ingreso
+          </button>
+        </div>
+      </div>
+
+      <!-- Income Summary Cards -->
+      <div class="summary-grid">
+        <div class="summary-card">
+          <span class="summary-label">Total del Mes</span>
+          <span class="summary-value text-success" id="inc-total">$0.00</span>
+        </div>
+        <div class="summary-card">
+          <span class="summary-label">Nº Transacciones</span>
+          <span class="summary-value" id="inc-count">0</span>
+        </div>
+        <div class="summary-card">
+          <span class="summary-label">Promedio por Ingreso</span>
+          <span class="summary-value" id="inc-avg">$0.00</span>
+        </div>
+      </div>
+
+      <!-- Filter Bar -->
+      <div class="filter-bar">
+        <div class="filter-group">
+          <label>Filtrar por compañía:</label>
+          <select class="filter-select" id="income-company-filter">
+            <option value="all">Todas</option>
+          </select>
+        </div>
+        <div class="search-box">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          <input type="text" placeholder="Buscar compañía..." id="income-search" />
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div class="table-container">
+        <table class="data-table" id="incomes-table">
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Compañía</th>
+              <th class="text-right">Monto ($)</th>
+              <th class="text-right">Monto (Bs.)</th>
+              <th>Observaciones</th>
+              <th class="text-center">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="incomes-tbody">
+            <tr class="empty-row"><td colspan="6"><p class="empty-state">No hay ingresos registrados para este mes</p></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <!-- ===================== MODAL ===================== -->
+  <div class="modal-overlay" id="modal-overlay">
+    <div class="modal" id="modal">
+      <div class="modal-header">
+        <h3 id="modal-title">Nuevo Gasto</h3>
+        <button class="modal-close" id="modal-close" aria-label="Cerrar">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <form id="modal-form">
+        <div class="form-body" id="modal-body">
+          <!-- Dynamic form fields injected by JS -->
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" id="modal-cancel">Cancelar</button>
+          <button type="submit" class="btn-primary" id="modal-submit">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ===================== DELETE CONFIRMATION MODAL ===================== -->
+  <div class="modal-overlay" id="confirm-overlay">
+    <div class="modal modal-confirm">
+      <div class="confirm-icon">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="8" x2="12" y2="12"></line>
+          <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg>
+      </div>
+      <h3>¿Eliminar registro?</h3>
+      <p>Esta acción no se puede deshacer.</p>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" id="confirm-cancel">Cancelar</button>
+        <button type="button" class="btn-danger" id="confirm-delete">Eliminar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== PAY COMMISSION MODAL ===================== -->
+  <div class="modal-overlay" id="pay-commission-overlay">
+    <div class="modal modal-confirm" style="max-width: 450px;">
+      <div class="confirm-icon" style="color: #A855F7; background: rgba(139, 92, 246, 0.12); border-color: rgba(139, 92, 246, 0.2);">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <rect x="2" y="4" width="20" height="16" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/>
+        </svg>
+      </div>
+      <h3 style="margin-top: 10px;">Confirmar Pago de Comisión</h3>
+      <p id="pay-commission-details" style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 15px;">Se registrará el pago de comisión en dólares.</p>
+      
+      <div class="form-group" style="text-align: left; margin-bottom: 15px; width: 100%;">
+        <label for="field-pay-exchange-rate" style="font-size: 0.85rem; color: var(--text-secondary);">Tasa BCV del día (Bs./$)</label>
+        <input type="number" id="field-pay-exchange-rate" step="0.01" min="0" placeholder="Ej: 45.50" style="width: 100%; height: 38px; border-radius: var(--radius-sm); border: 1px solid var(--border-default); background: var(--bg-input); color: var(--text-primary); padding: 8px 12px; outline: none;" required />
+      </div>
+      
+      <div style="font-size: 0.85rem; color: var(--text-muted); width: 100%; text-align: left; margin-bottom: 20px; padding: 10px; background: rgba(255,255,255,0.02); border-radius: 4px; display: flex; justify-content: space-between;">
+        <span>Total a pagar en Bs.:</span>
+        <strong id="label-pay-amount-bs" class="text-success" style="font-size: 0.95rem;">Bs. 0,00</strong>
+      </div>
+      
+      <div class="modal-footer" style="width: 100%;">
+        <button type="button" class="btn-secondary" id="btn-pay-cancel">Cancelar</button>
+        <button type="button" class="btn-primary" id="btn-pay-confirm" style="background: var(--accent-gradient);">Confirmar Pago</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== TOAST ===================== -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Hidden file input for import -->
+  <input type="file" id="file-input" accept=".json" style="display:none" />
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
