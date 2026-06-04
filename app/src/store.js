@@ -155,7 +155,9 @@ export async function uploadLocalDataToSupabase() {
   const incomesToUpload = [];
   for (const incomesList of Object.values(store.incomes)) {
     for (const inc of incomesList) {
-      incomesToUpload.push(mapIncomeToDB(inc, userId));
+      if (inc && inc.date && inc.company && inc.amount !== undefined && inc.amount !== null) {
+        incomesToUpload.push(mapIncomeToDB(inc, userId));
+      }
     }
   }
 
@@ -171,7 +173,9 @@ export async function uploadLocalDataToSupabase() {
   const expensesToUpload = [];
   for (const expensesList of Object.values(store.expenses)) {
     for (const exp of expensesList) {
-      expensesToUpload.push(mapExpenseToDB(exp, userId));
+      if (exp && exp.date && exp.concept && exp.amount !== undefined && exp.amount !== null) {
+        expensesToUpload.push(mapExpenseToDB(exp, userId));
+      }
     }
   }
 
@@ -738,7 +742,43 @@ export async function importData(json) {
     if (!data.expenses || !data.incomes) {
       throw new Error('Formato inválido. Debe tener objetos "expenses" e "incomes".');
     }
-    saveStore(data);
+
+    // Clean expenses: remove items without a valid date, concept, or amount
+    const cleanExpenses = {};
+    for (const [key, list] of Object.entries(data.expenses)) {
+      if (Array.isArray(list)) {
+        const cleanList = list.filter(item => 
+          item && 
+          item.date && 
+          item.concept && 
+          item.amount !== undefined && 
+          item.amount !== null
+        );
+        if (cleanList.length > 0) {
+          cleanExpenses[key] = cleanList;
+        }
+      }
+    }
+
+    // Clean incomes: remove items without a valid date, company, or amount
+    const cleanIncomes = {};
+    for (const [key, list] of Object.entries(data.incomes)) {
+      if (Array.isArray(list)) {
+        const cleanList = list.filter(item => 
+          item && 
+          item.date && 
+          item.company && 
+          item.amount !== undefined && 
+          item.amount !== null
+        );
+        if (cleanList.length > 0) {
+          cleanIncomes[key] = cleanList;
+        }
+      }
+    }
+
+    const cleanData = { expenses: cleanExpenses, incomes: cleanIncomes };
+    saveStore(cleanData);
 
     // Sync imported data to Supabase in background
     const { data: { session } } = await supabase.auth.getSession();
