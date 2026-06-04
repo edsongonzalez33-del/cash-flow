@@ -829,38 +829,126 @@ export function getRecentTransactions(year, month, limit = 8) {
 export async function importData(json) {
   try {
     const data = typeof json === 'string' ? JSON.parse(json) : json;
-    if (!data.expenses || !data.incomes) {
-      throw new Error('Formato inválido. Debe tener objetos "expenses" e "incomes".');
+    if (!data || typeof data !== 'object') {
+      throw new Error('El archivo no contiene un objeto JSON válido.');
     }
 
-    // Group cleaned expenses by their actual date
+    const rawExpenses = data.expenses;
+    const rawIncomes = data.incomes;
+
+    if (!rawExpenses && !rawIncomes) {
+      throw new Error('Formato inválido. El archivo debe contener la sección "expenses" y/o "incomes".');
+    }
+
     const cleanExpenses = {};
-    for (const list of Object.values(data.expenses)) {
-      if (Array.isArray(list)) {
-        for (const item of list) {
-          if (item && item.date && item.concept && item.amount !== undefined && item.amount !== null) {
-            const [y, m] = item.date.split('-').map(Number);
+    const cleanIncomes = {};
+
+    // Helper para procesar un gasto individual de forma segura
+    const processExpense = (item) => {
+      if (!item) return;
+      // Validar que tenga al menos fecha, concepto y monto
+      if (item.date && item.concept && item.amount !== undefined && item.amount !== null) {
+        const dateStr = String(item.date).trim();
+        const parts = dateStr.split('-');
+        if (parts.length >= 2) {
+          const y = parseInt(parts[0], 10);
+          const m = parseInt(parts[1], 10);
+          if (!isNaN(y) && !isNaN(m)) {
             const key = monthKey(y, m);
             if (!cleanExpenses[key]) cleanExpenses[key] = [];
-            cleanExpenses[key].push(item);
+            
+            cleanExpenses[key].push({
+              id: item.id || uuid(),
+              date: dateStr,
+              concept: normalizeConceptStr(item.concept),
+              amount: parseFloat(item.amount) || 0,
+              amountBs: parseFloat(item.amountBs || item.amount_bs || 0),
+              exchangeRate: parseFloat(item.exchangeRate || item.exchange_rate || 0),
+              type: item.type || 'variable',
+              notes: item.notes || ''
+            });
+          }
+        }
+      }
+    };
+
+    // Helper para procesar un ingreso individual de forma segura
+    const processIncome = (item) => {
+      if (!item) return;
+      // Validar que tenga al menos fecha, compañía y monto
+      if (item.date && item.company && item.amount !== undefined && item.amount !== null) {
+        const dateStr = String(item.date).trim();
+        const parts = dateStr.split('-');
+        if (parts.length >= 2) {
+          const y = parseInt(parts[0], 10);
+          const m = parseInt(parts[1], 10);
+          if (!isNaN(y) && !isNaN(m)) {
+            const key = monthKey(y, m);
+            if (!cleanIncomes[key]) cleanIncomes[key] = [];
+            
+            cleanIncomes[key].push({
+              id: item.id || uuid(),
+              date: dateStr,
+              company: normalizeCompanyStr(item.company),
+              amount: parseFloat(item.amount) || 0,
+              amountBs: parseFloat(item.amountBs || item.amount_bs || 0),
+              exchangeRate: parseFloat(item.exchangeRate || item.exchange_rate || 0),
+              notes: item.notes || '',
+              commissionActive: !!(item.commissionActive || item.commission_active),
+              commissionRecipient: item.commissionRecipient || item.commission_recipient || '',
+              commissionStatus: item.commissionStatus || item.commission_status || 'pendiente',
+              commissionAmount: parseFloat(item.commissionAmount || item.commission_amount || 0),
+              commissionPct: parseFloat(item.commissionPct || item.commission_pct || 0)
+            });
+          }
+        }
+      }
+    };
+
+    // Procesar los gastos según la estructura que tengan
+    if (rawExpenses) {
+      if (Array.isArray(rawExpenses)) {
+        // Formato: lista plana [ { ... }, { ... } ]
+        for (const item of rawExpenses) {
+          processExpense(item);
+        }
+      } else if (typeof rawExpenses === 'object') {
+        // Formato: agrupado por mes { "YYYY-MM": [ ... ] }
+        for (const list of Object.values(rawExpenses)) {
+          if (Array.isArray(list)) {
+            for (const item of list) {
+              processExpense(item);
+            }
           }
         }
       }
     }
 
-    // Group cleaned incomes by their actual date
-    const cleanIncomes = {};
-    for (const list of Object.values(data.incomes)) {
-      if (Array.isArray(list)) {
-        for (const item of list) {
-          if (item && item.date && item.company && item.amount !== undefined && item.amount !== null) {
-            const [y, m] = item.date.split('-').map(Number);
-            const key = monthKey(y, m);
-            if (!cleanIncomes[key]) cleanIncomes[key] = [];
-            cleanIncomes[key].push(item);
+    // Procesar los ingresos según la estructura que tengan
+    if (rawIncomes) {
+      if (Array.isArray(rawIncomes)) {
+        // Formato: lista plana [ { ... }, { ... } ]
+        for (const item of rawIncomes) {
+          processIncome(item);
+        }
+      } else if (typeof rawIncomes === 'object') {
+        // Formato: agrupado por mes { "YYYY-MM": [ ... ] }
+        for (const list of Object.values(rawIncomes)) {
+          if (Array.isArray(list)) {
+            for (const item of list) {
+              processIncome(item);
+            }
           }
         }
       }
+    }
+
+    // Validar si al menos se importó un registro válido
+    const totalExpenses = Object.values(cleanExpenses).reduce((acc, curr) => acc + curr.length, 0);
+    const totalIncomes = Object.values(cleanIncomes).reduce((acc, curr) => acc + curr.length, 0);
+
+    if (totalExpenses === 0 && totalIncomes === 0) {
+      throw new Error('No se encontraron registros válidos de ingresos o gastos en el archivo.');
     }
 
     const cleanData = { expenses: cleanExpenses, incomes: cleanIncomes };
