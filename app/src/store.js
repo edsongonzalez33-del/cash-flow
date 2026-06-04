@@ -145,40 +145,42 @@ export async function syncWithSupabase() {
  * Uploads all pre-existing local data to Supabase database (migration helper)
  */
 export async function uploadLocalDataToSupabase() {
-  try {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) return;
 
-    const userId = session.user.id;
-    const store = getStore();
+  const userId = session.user.id;
+  const store = getStore();
 
-    // 1. Upload incomes
-    const incomesToUpload = [];
-    for (const incomesList of Object.values(store.incomes)) {
-      for (const inc of incomesList) {
-        incomesToUpload.push(mapIncomeToDB(inc, userId));
-      }
+  // 1. Upload incomes
+  const incomesToUpload = [];
+  for (const incomesList of Object.values(store.incomes)) {
+    for (const inc of incomesList) {
+      incomesToUpload.push(mapIncomeToDB(inc, userId));
     }
+  }
 
-    if (incomesToUpload.length > 0) {
-      const { error } = await supabase.from('incomes').upsert(incomesToUpload);
-      if (error) console.error('Error uploading local incomes:', error);
+  if (incomesToUpload.length > 0) {
+    const { error } = await supabase.from('incomes').upsert(incomesToUpload);
+    if (error) {
+      console.error('Error uploading local incomes:', error);
+      throw new Error('Error al subir ingresos locales: ' + error.message);
     }
+  }
 
-    // 2. Upload expenses
-    const expensesToUpload = [];
-    for (const expensesList of Object.values(store.expenses)) {
-      for (const exp of expensesList) {
-        expensesToUpload.push(mapExpenseToDB(exp, userId));
-      }
+  // 2. Upload expenses
+  const expensesToUpload = [];
+  for (const expensesList of Object.values(store.expenses)) {
+    for (const exp of expensesList) {
+      expensesToUpload.push(mapExpenseToDB(exp, userId));
     }
+  }
 
-    if (expensesToUpload.length > 0) {
-      const { error } = await supabase.from('expenses').upsert(expensesToUpload);
-      if (error) console.error('Error uploading local expenses:', error);
+  if (expensesToUpload.length > 0) {
+    const { error } = await supabase.from('expenses').upsert(expensesToUpload);
+    if (error) {
+      console.error('Error uploading local expenses:', error);
+      throw new Error('Error al subir gastos locales: ' + error.message);
     }
-  } catch (err) {
-    console.error('Failed to upload offline data:', err);
   }
 }
 
@@ -734,7 +736,7 @@ export async function importData(json) {
   try {
     const data = typeof json === 'string' ? JSON.parse(json) : json;
     if (!data.expenses || !data.incomes) {
-      throw new Error('Formato inválido');
+      throw new Error('Formato inválido. Debe tener objetos "expenses" e "incomes".');
     }
     saveStore(data);
 
@@ -743,8 +745,16 @@ export async function importData(json) {
     if (session) {
       const userId = session.user.id;
       // 1. Wipe remote tables first
-      await supabase.from('incomes').delete().eq('user_id', userId);
-      await supabase.from('expenses').delete().eq('user_id', userId);
+      const { error: deleteIncomesError } = await supabase.from('incomes').delete().eq('user_id', userId);
+      if (deleteIncomesError) {
+        throw new Error('Error al limpiar ingresos en Supabase: ' + deleteIncomesError.message);
+      }
+
+      const { error: deleteExpensesError } = await supabase.from('expenses').delete().eq('user_id', userId);
+      if (deleteExpensesError) {
+        throw new Error('Error al limpiar gastos en Supabase: ' + deleteExpensesError.message);
+      }
+
       // 2. Upload the clean backup data
       await uploadLocalDataToSupabase();
     }
@@ -752,7 +762,7 @@ export async function importData(json) {
     return true;
   } catch (e) {
     console.error('Import error:', e);
-    return false;
+    throw e;
   }
 }
 
