@@ -74,21 +74,31 @@ async function boot() {
 function setupNavigation() {
   $$('.nav-item').forEach(item => {
     item.addEventListener('click', (e) => {
-      e.preventDefault();
       const section = item.dataset.section;
-      navigateTo(section);
+      if (section) {
+        e.preventDefault();
+        navigateTo(section);
+      }
     });
   });
 }
 
 function navigateTo(sectionName) {
+  if (!sectionName) return;
+
   // Update nav
-  $$('.nav-item').forEach(n => n.classList.remove('active'));
-  $(`[data-section="${sectionName}"]`).classList.add('active');
+  $$('.nav-item').forEach(n => {
+    if (n.dataset.section) {
+      n.classList.remove('active');
+    }
+  });
+  const navEl = $(`[data-section="${sectionName}"]`);
+  if (navEl) navEl.classList.add('active');
 
   // Update sections
   $$('.section').forEach(s => s.classList.remove('active'));
-  $(`#section-${sectionName}`).classList.add('active');
+  const secEl = $(`#section-${sectionName}`);
+  if (secEl) secEl.classList.add('active');
 
   // Close mobile menu
   $('#sidebar').classList.remove('open');
