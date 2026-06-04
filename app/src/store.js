@@ -363,6 +363,13 @@ function saveStore(data) {
 }
 
 /**
+ * Clears the local cache completely (e.g. on logout)
+ */
+export function clearLocalCache() {
+  localStorage.removeItem(STORAGE_KEY);
+}
+
+/**
  * Check if the store has any data
  */
 export function hasData() {

@@ -1,5 +1,6 @@
 import { supabase } from './supabase.js';
 import { showToast, $ } from './utils.js';
+import { clearLocalCache } from './store.js';
 
 let currentUser = null;
 let onLoginSuccessCallback = null;
@@ -18,6 +19,7 @@ export function initAuth(onLoginSuccess) {
       if (onLoginSuccessCallback) onLoginSuccessCallback(session.user);
     } else if (event === 'SIGNED_OUT') {
       currentUser = null;
+      clearLocalCache();
       showAuthModal();
     }
   });
