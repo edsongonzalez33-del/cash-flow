@@ -847,12 +847,26 @@ export async function importData(json) {
     const cleanIncomes = {};
 
     // Helper para procesar un gasto individual de forma segura
-    const processExpense = (item) => {
+    const processExpense = (item, expectedMonthKey = null) => {
       if (!item) return;
-      // Validar que tenga al menos fecha, concepto y monto
       if (item.date && item.concept && item.amount !== undefined && item.amount !== null) {
-        const dateStr = String(item.date).trim();
-        const parts = dateStr.split('-');
+        let dateStr = String(item.date).trim();
+        let parts = dateStr.split('-');
+        if (parts.length >= 3 && expectedMonthKey) {
+          const [expY, expM] = expectedMonthKey.split('-');
+          // Si el mes en la fecha no coincide con el mes de la llave, 
+          // asumimos que el día y el mes se invirtieron (YYYY-DD-MM).
+          if (parts[1] !== expM && parts[2] === expM) {
+            // Corregir fecha a YYYY-MM-DD
+            dateStr = `${parts[0]}-${parts[2]}-${parts[1]}`;
+            parts = dateStr.split('-');
+          } else if (parts[0] !== expY || parts[1] !== expM) {
+            // Si está totalmente desfasado, forzar al mes de la llave para no perderlo
+            dateStr = `${expY}-${expM}-${parts[2]}`;
+            parts = dateStr.split('-');
+          }
+        }
+        
         if (parts.length >= 2) {
           const y = parseInt(parts[0], 10);
           const m = parseInt(parts[1], 10);
@@ -876,12 +890,22 @@ export async function importData(json) {
     };
 
     // Helper para procesar un ingreso individual de forma segura
-    const processIncome = (item) => {
+    const processIncome = (item, expectedMonthKey = null) => {
       if (!item) return;
-      // Validar que tenga al menos fecha, compañía y monto
       if (item.date && item.company && item.amount !== undefined && item.amount !== null) {
-        const dateStr = String(item.date).trim();
-        const parts = dateStr.split('-');
+        let dateStr = String(item.date).trim();
+        let parts = dateStr.split('-');
+        if (parts.length >= 3 && expectedMonthKey) {
+          const [expY, expM] = expectedMonthKey.split('-');
+          if (parts[1] !== expM && parts[2] === expM) {
+            dateStr = `${parts[0]}-${parts[2]}-${parts[1]}`;
+            parts = dateStr.split('-');
+          } else if (parts[0] !== expY || parts[1] !== expM) {
+            dateStr = `${expY}-${expM}-${parts[2]}`;
+            parts = dateStr.split('-');
+          }
+        }
+
         if (parts.length >= 2) {
           const y = parseInt(parts[0], 10);
           const m = parseInt(parts[1], 10);
@@ -911,16 +935,14 @@ export async function importData(json) {
     // Procesar los gastos según la estructura que tengan
     if (rawExpenses) {
       if (Array.isArray(rawExpenses)) {
-        // Formato: lista plana [ { ... }, { ... } ]
         for (const item of rawExpenses) {
           processExpense(item);
         }
       } else if (typeof rawExpenses === 'object') {
-        // Formato: agrupado por mes { "YYYY-MM": [ ... ] }
-        for (const list of Object.values(rawExpenses)) {
+        for (const [mKey, list] of Object.entries(rawExpenses)) {
           if (Array.isArray(list)) {
             for (const item of list) {
-              processExpense(item);
+              processExpense(item, mKey);
             }
           }
         }
@@ -930,16 +952,14 @@ export async function importData(json) {
     // Procesar los ingresos según la estructura que tengan
     if (rawIncomes) {
       if (Array.isArray(rawIncomes)) {
-        // Formato: lista plana [ { ... }, { ... } ]
         for (const item of rawIncomes) {
           processIncome(item);
         }
       } else if (typeof rawIncomes === 'object') {
-        // Formato: agrupado por mes { "YYYY-MM": [ ... ] }
-        for (const list of Object.values(rawIncomes)) {
+        for (const [mKey, list] of Object.entries(rawIncomes)) {
           if (Array.isArray(list)) {
             for (const item of list) {
-              processIncome(item);
+              processIncome(item, mKey);
             }
           }
         }
