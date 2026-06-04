@@ -56,11 +56,11 @@ async function boot() {
   initAuth(async (user) => {
     showToast(`Bienvenido, ${user.email}`, 'success');
     
-    // Trigger cloud synchronization and upload local data if any
-    await uploadLocalDataToSupabase();
+    // La nube (Supabase) es la única fuente de la verdad al iniciar sesión.
+    // Descargamos los datos y sobrescribimos lo local.
     const synced = await syncWithSupabase();
     if (synced) {
-      showToast('Datos sincronizados con la nube', 'success');
+      showToast('Datos descargados de la nube', 'success');
     }
     
     // Initial render after syncing
