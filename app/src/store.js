@@ -394,7 +394,8 @@ export function getExpenses(year, month) {
 
 export function addExpense(year, month, expense) {
   const store = getStore();
-  const key = monthKey(year, month);
+  const [y, m] = expense.date.split('-').map(Number);
+  const key = monthKey(y, m);
   if (!store.expenses[key]) store.expenses[key] = [];
   const entry = { id: uuid(), ...expense };
   store.expenses[key].push(entry);
@@ -415,36 +416,80 @@ export function addExpense(year, month, expense) {
 
 export function updateExpense(year, month, id, updates) {
   const store = getStore();
-  const key = monthKey(year, month);
-  const list = store.expenses[key] || [];
-  const idx = list.findIndex(e => e.id === id);
+  let key = monthKey(year, month);
+  let list = store.expenses[key] || [];
+  let idx = list.findIndex(e => e.id === id);
+
+  if (idx === -1) {
+    for (const [k, l] of Object.entries(store.expenses)) {
+      const i = l.findIndex(e => e.id === id);
+      if (i !== -1) {
+        key = k;
+        list = l;
+        idx = i;
+        break;
+      }
+    }
+  }
+
   if (idx !== -1) {
-    list[idx] = { ...list[idx], ...updates };
+    const original = list[idx];
+    const updated = { ...original, ...updates };
+
+    const [origY, origM] = original.date.split('-').map(Number);
+    const [updY, updM] = updated.date.split('-').map(Number);
+
+    if (origY !== updY || origM !== updM) {
+      list.splice(idx, 1);
+      if (list.length === 0) delete store.expenses[key];
+
+      const newKey = monthKey(updY, updM);
+      if (!store.expenses[newKey]) store.expenses[newKey] = [];
+      store.expenses[newKey].push(updated);
+    } else {
+      list[idx] = updated;
+    }
+
     saveStore(store);
 
     // Sync to Supabase in background
-    const entry = list[idx];
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        const dbRow = mapExpenseToDB(entry, session.user.id);
+        const dbRow = mapExpenseToDB(updated, session.user.id);
         supabase.from('expenses').upsert(dbRow).then(({ error }) => {
           if (error) console.error('Error syncing updateExpense:', error);
         });
       }
     });
 
-    return list[idx];
+    return updated;
   }
   return null;
 }
 
 export function deleteExpense(year, month, id) {
   const store = getStore();
-  const key = monthKey(year, month);
-  const list = store.expenses[key] || [];
-  store.expenses[key] = list.filter(e => e.id !== id);
-  if (store.expenses[key].length === 0) delete store.expenses[key];
-  saveStore(store);
+  let key = monthKey(year, month);
+  let list = store.expenses[key] || [];
+  let idx = list.findIndex(e => e.id === id);
+
+  if (idx === -1) {
+    for (const [k, l] of Object.entries(store.expenses)) {
+      const i = l.findIndex(e => e.id === id);
+      if (i !== -1) {
+        key = k;
+        list = l;
+        idx = i;
+        break;
+      }
+    }
+  }
+
+  if (idx !== -1) {
+    list.splice(idx, 1);
+    if (list.length === 0) delete store.expenses[key];
+    saveStore(store);
+  }
 
   // Sync to Supabase in background
   supabase.auth.getSession().then(({ data: { session } }) => {
@@ -467,7 +512,8 @@ export function getIncomes(year, month) {
 
 export function addIncome(year, month, income) {
   const store = getStore();
-  const key = monthKey(year, month);
+  const [y, m] = income.date.split('-').map(Number);
+  const key = monthKey(y, m);
   if (!store.incomes[key]) store.incomes[key] = [];
   const entry = { id: uuid(), ...income };
   store.incomes[key].push(entry);
@@ -488,36 +534,80 @@ export function addIncome(year, month, income) {
 
 export function updateIncome(year, month, id, updates) {
   const store = getStore();
-  const key = monthKey(year, month);
-  const list = store.incomes[key] || [];
-  const idx = list.findIndex(e => e.id === id);
+  let key = monthKey(year, month);
+  let list = store.incomes[key] || [];
+  let idx = list.findIndex(e => e.id === id);
+
+  if (idx === -1) {
+    for (const [k, l] of Object.entries(store.incomes)) {
+      const i = l.findIndex(e => e.id === id);
+      if (i !== -1) {
+        key = k;
+        list = l;
+        idx = i;
+        break;
+      }
+    }
+  }
+
   if (idx !== -1) {
-    list[idx] = { ...list[idx], ...updates };
+    const original = list[idx];
+    const updated = { ...original, ...updates };
+
+    const [origY, origM] = original.date.split('-').map(Number);
+    const [updY, updM] = updated.date.split('-').map(Number);
+
+    if (origY !== updY || origM !== updM) {
+      list.splice(idx, 1);
+      if (list.length === 0) delete store.incomes[key];
+
+      const newKey = monthKey(updY, updM);
+      if (!store.incomes[newKey]) store.incomes[newKey] = [];
+      store.incomes[newKey].push(updated);
+    } else {
+      list[idx] = updated;
+    }
+
     saveStore(store);
 
     // Sync to Supabase in background
-    const entry = list[idx];
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        const dbRow = mapIncomeToDB(entry, session.user.id);
+        const dbRow = mapIncomeToDB(updated, session.user.id);
         supabase.from('incomes').upsert(dbRow).then(({ error }) => {
           if (error) console.error('Error syncing updateIncome:', error);
         });
       }
     });
 
-    return list[idx];
+    return updated;
   }
   return null;
 }
 
 export function deleteIncome(year, month, id) {
   const store = getStore();
-  const key = monthKey(year, month);
-  const list = store.incomes[key] || [];
-  store.incomes[key] = list.filter(e => e.id !== id);
-  if (store.incomes[key].length === 0) delete store.incomes[key];
-  saveStore(store);
+  let key = monthKey(year, month);
+  let list = store.incomes[key] || [];
+  let idx = list.findIndex(e => e.id === id);
+
+  if (idx === -1) {
+    for (const [k, l] of Object.entries(store.incomes)) {
+      const i = l.findIndex(e => e.id === id);
+      if (i !== -1) {
+        key = k;
+        list = l;
+        idx = i;
+        break;
+      }
+    }
+  }
+
+  if (idx !== -1) {
+    list.splice(idx, 1);
+    if (list.length === 0) delete store.incomes[key];
+    saveStore(store);
+  }
 
   // Sync to Supabase in background
   supabase.auth.getSession().then(({ data: { session } }) => {
@@ -743,36 +833,32 @@ export async function importData(json) {
       throw new Error('Formato inválido. Debe tener objetos "expenses" e "incomes".');
     }
 
-    // Clean expenses: remove items without a valid date, concept, or amount
+    // Group cleaned expenses by their actual date
     const cleanExpenses = {};
-    for (const [key, list] of Object.entries(data.expenses)) {
+    for (const list of Object.values(data.expenses)) {
       if (Array.isArray(list)) {
-        const cleanList = list.filter(item => 
-          item && 
-          item.date && 
-          item.concept && 
-          item.amount !== undefined && 
-          item.amount !== null
-        );
-        if (cleanList.length > 0) {
-          cleanExpenses[key] = cleanList;
+        for (const item of list) {
+          if (item && item.date && item.concept && item.amount !== undefined && item.amount !== null) {
+            const [y, m] = item.date.split('-').map(Number);
+            const key = monthKey(y, m);
+            if (!cleanExpenses[key]) cleanExpenses[key] = [];
+            cleanExpenses[key].push(item);
+          }
         }
       }
     }
 
-    // Clean incomes: remove items without a valid date, company, or amount
+    // Group cleaned incomes by their actual date
     const cleanIncomes = {};
-    for (const [key, list] of Object.entries(data.incomes)) {
+    for (const list of Object.values(data.incomes)) {
       if (Array.isArray(list)) {
-        const cleanList = list.filter(item => 
-          item && 
-          item.date && 
-          item.company && 
-          item.amount !== undefined && 
-          item.amount !== null
-        );
-        if (cleanList.length > 0) {
-          cleanIncomes[key] = cleanList;
+        for (const item of list) {
+          if (item && item.date && item.company && item.amount !== undefined && item.amount !== null) {
+            const [y, m] = item.date.split('-').map(Number);
+            const key = monthKey(y, m);
+            if (!cleanIncomes[key]) cleanIncomes[key] = [];
+            cleanIncomes[key].push(item);
+          }
         }
       }
     }
