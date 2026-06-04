@@ -161,10 +161,12 @@ export async function uploadLocalDataToSupabase() {
     }
   }
 
-  if (incomesToUpload.length > 0) {
-    const { error } = await supabase.from('incomes').upsert(incomesToUpload);
+  const chunkSize = 100;
+  for (let i = 0; i < incomesToUpload.length; i += chunkSize) {
+    const chunk = incomesToUpload.slice(i, i + chunkSize);
+    const { error } = await supabase.from('incomes').upsert(chunk);
     if (error) {
-      console.error('Error uploading local incomes:', error);
+      console.error('Error uploading local incomes chunk:', error);
       throw new Error('Error al subir ingresos locales: ' + error.message);
     }
   }
@@ -179,10 +181,11 @@ export async function uploadLocalDataToSupabase() {
     }
   }
 
-  if (expensesToUpload.length > 0) {
-    const { error } = await supabase.from('expenses').upsert(expensesToUpload);
+  for (let i = 0; i < expensesToUpload.length; i += chunkSize) {
+    const chunk = expensesToUpload.slice(i, i + chunkSize);
+    const { error } = await supabase.from('expenses').upsert(chunk);
     if (error) {
-      console.error('Error uploading local expenses:', error);
+      console.error('Error uploading local expenses chunk:', error);
       throw new Error('Error al subir gastos locales: ' + error.message);
     }
   }
@@ -954,24 +957,29 @@ export async function importData(json) {
     const cleanData = { expenses: cleanExpenses, incomes: cleanIncomes };
     saveStore(cleanData);
 
-    // Sync imported data to Supabase in background
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session) {
-      const userId = session.user.id;
-      // 1. Wipe remote tables first
-      const { error: deleteIncomesError } = await supabase.from('incomes').delete().eq('user_id', userId);
-      if (deleteIncomesError) {
-        throw new Error('Error al limpiar ingresos en Supabase: ' + deleteIncomesError.message);
-      }
+    // Sync imported data to Supabase in background without blocking the UI
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (session) {
+        try {
+          const userId = session.user.id;
+          // 1. Wipe remote tables first
+          const { error: deleteIncomesError } = await supabase.from('incomes').delete().eq('user_id', userId);
+          if (deleteIncomesError) {
+            console.error('Error al limpiar ingresos en Supabase:', deleteIncomesError);
+          }
 
-      const { error: deleteExpensesError } = await supabase.from('expenses').delete().eq('user_id', userId);
-      if (deleteExpensesError) {
-        throw new Error('Error al limpiar gastos en Supabase: ' + deleteExpensesError.message);
-      }
+          const { error: deleteExpensesError } = await supabase.from('expenses').delete().eq('user_id', userId);
+          if (deleteExpensesError) {
+            console.error('Error al limpiar gastos en Supabase:', deleteExpensesError);
+          }
 
-      // 2. Upload the clean backup data
-      await uploadLocalDataToSupabase();
-    }
+          // 2. Upload the clean backup data
+          await uploadLocalDataToSupabase();
+        } catch (syncError) {
+          console.error("Cloud sync failed after import:", syncError);
+        }
+      }
+    });
     
     return true;
   } catch (e) {
