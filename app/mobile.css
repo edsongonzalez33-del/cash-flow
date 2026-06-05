@@ -125,6 +125,33 @@ body {
   text-overflow: ellipsis;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-config {
+  width: 40px;
+  height: 40px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-config:active {
+  background: rgba(99, 102, 241, 0.15);
+  color: var(--accent);
+  border-color: rgba(99, 102, 241, 0.3);
+  transform: scale(0.95);
+}
+
 .btn-logout {
   width: 40px;
   height: 40px;
@@ -146,26 +173,172 @@ body {
   transform: scale(0.95);
 }
 
-/* ===================== MONTH SELECTOR ===================== */
-.month-selector-section {
+/* ===================== TICKER RECORDATORIOS ===================== */
+.ticker-section {
+  margin-bottom: 20px;
+}
+
+.ticker-wrapper {
+  display: flex;
+  align-items: center;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  height: 48px;
+  overflow: hidden;
+  backdrop-filter: blur(10px);
+}
+
+.ticker-title {
+  background: rgba(99, 102, 241, 0.12);
+  color: #a5b4fc;
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 0 12px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  letter-spacing: 0.05em;
+  border-right: 1px solid var(--border-default);
+  flex-shrink: 0;
+  border-radius: var(--radius-lg) 0 0 var(--radius-lg);
+}
+
+.ticker-content {
+  flex: 1;
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.ticker-scroll {
+  white-space: nowrap;
+  position: absolute;
+  left: 0;
+  padding-left: 100%;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  animation: ticker-slide 22s linear infinite;
+}
+
+@keyframes ticker-slide {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-100%, 0, 0);
+  }
+}
+
+.ticker-scroll:hover {
+  animation-play-state: paused;
+}
+
+/* Item dentro del ticker */
+.ticker-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ticker-item-separator {
+  color: var(--text-muted);
+  opacity: 0.5;
+}
+
+.ticker-badge-pending {
+  color: #f59e0b;
+}
+
+.ticker-badge-overdue {
+  color: #fb7185;
+}
+
+.ticker-badge-done {
+  color: #34d399;
+}
+
+/* ===================== LISTA DE RECORDATORIOS CONFIG ===================== */
+.reminder-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+}
+
+.reminder-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.reminder-concept {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.reminder-meta {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+}
+
+.btn-delete-reminder {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+}
+
+.btn-delete-reminder:active {
+  background: rgba(244, 63, 94, 0.15);
+  color: var(--danger);
+}
+
+
+/* ===================== CONTROLES SUPERIORES (MES Y ACCIONES) ===================== */
+.top-controls-section {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   margin-bottom: 24px;
 }
 
 .month-selector {
+  flex: 1;
   display: flex;
   align-items: center;
   justify-content: space-between;
   background: var(--bg-secondary);
   border: 1px solid var(--border-default);
   border-radius: var(--radius-lg);
-  padding: 6px;
+  padding: 4px 6px;
   backdrop-filter: blur(10px);
+  height: 48px;
 }
 
 .btn-month-nav {
-  width: 38px;
-  height: 38px;
-  background: rgba(255, 255, 255, 0.03);
+  width: 34px;
+  height: 34px;
+  background: rgba(255, 255, 255, 0.02);
   border: 1px solid var(--border-default);
   border-radius: var(--radius-md);
   color: var(--text-primary);
@@ -177,94 +350,76 @@ body {
 }
 
 .btn-month-nav:active {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.08);
   transform: scale(0.92);
 }
 
 .month-label {
-  font-size: 1.05rem;
+  font-size: 0.98rem;
   font-weight: 700;
   color: var(--text-primary);
   letter-spacing: -0.01em;
 }
 
-/* ===================== QUICK ACTIONS (GIANT BUTTONS) ===================== */
-.quick-actions-section {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  margin-bottom: 24px;
-}
-
-.btn-giant {
+/* Botones de Acción Redondos */
+.btn-round-action {
   border: none;
-  border-radius: var(--radius-xl);
-  padding: 20px;
+  border-radius: 50%;
+  width: 80px;
+  height: 80px;
   display: flex;
   align-items: center;
-  gap: 18px;
+  justify-content: center;
   cursor: pointer;
-  text-align: left;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  width: 100%;
-  color: #fff;
   position: relative;
   overflow: hidden;
+  flex-shrink: 0;
 }
 
-.btn-giant::after {
+.btn-round-action::after {
   content: '';
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background: linear-gradient(rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0));
+  background: linear-gradient(rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0));
   pointer-events: none;
 }
 
-.btn-giant:active {
-  transform: translateY(2px) scale(0.98);
+.btn-round-action:active {
+  transform: translateY(2px) scale(0.9);
 }
 
-.btn-giant-income {
-  background: var(--success-gradient);
-  box-shadow: var(--shadow-glow-success);
+.btn-round-income {
+  border: 3px solid #10b981;
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.04);
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.2), inset 0 0 12px rgba(16, 185, 129, 0.08);
 }
 
-.btn-giant-expense {
-  background: var(--danger-gradient);
-  box-shadow: var(--shadow-glow-danger);
+.btn-round-income:active {
+  background: rgba(16, 185, 129, 0.15);
+  box-shadow: 0 0 25px rgba(16, 185, 129, 0.35), inset 0 0 15px rgba(16, 185, 129, 0.15);
 }
 
-.btn-giant-icon {
-  width: 56px;
-  height: 56px;
-  border-radius: var(--radius-lg);
-  background: rgba(255, 255, 255, 0.15);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+.btn-round-expense {
+  border: 3px solid #f43f5e;
+  color: #f43f5e;
+  background: rgba(244, 63, 94, 0.04);
+  box-shadow: 0 0 20px rgba(244, 63, 94, 0.18), inset 0 0 12px rgba(244, 63, 94, 0.08);
 }
 
-.btn-giant-text {
-  display: flex;
-  flex-direction: column;
+.btn-round-expense:active {
+  background: rgba(244, 63, 94, 0.15);
+  box-shadow: 0 0 25px rgba(244, 63, 94, 0.32), inset 0 0 15px rgba(244, 63, 94, 0.15);
 }
 
-.btn-subtitle {
-  font-size: 0.78rem;
-  font-weight: 600;
-  opacity: 0.85;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.btn-title {
-  font-size: 1.25rem;
-  font-weight: 800;
-  letter-spacing: 0.02em;
+.btn-round-action svg {
+  width: 42px;
+  height: 42px;
+  stroke-width: 4.5;
 }
 
 /* ===================== KEY KPIs ===================== */
@@ -855,3 +1010,184 @@ textarea {
     transform: translateY(-10px);
   }
 }
+
+/* ===================== ESTILO CYBERPUNK FORM (RECORDATORIOS) ===================== */
+.cyber-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  background: rgba(13, 17, 29, 0.65) !important;
+  border: 1px solid rgba(168, 85, 247, 0.25) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5) !important;
+  padding: 20px 18px !important;
+  border-radius: var(--radius-lg) !important;
+  margin-top: 10px;
+}
+
+.cyber-title {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #f3e8ff;
+  text-shadow: 0 0 10px rgba(168, 85, 247, 0.5);
+  text-align: center;
+  line-height: 1.25;
+  letter-spacing: 0.05em;
+  margin-bottom: 2px;
+}
+
+.cyber-subtitle {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  text-align: center;
+  margin-bottom: 12px;
+}
+
+.cyber-group label {
+  color: #c084fc !important;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: none !important;
+  letter-spacing: 0.02em;
+  margin-bottom: 6px;
+  text-align: left;
+}
+
+.cyber-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.cyber-input-wrapper input,
+.cyber-input-wrapper select {
+  background: rgba(15, 23, 42, 0.6) !important;
+  border: 2px solid #a855f7 !important;
+  border-radius: var(--radius-md) !important;
+  color: var(--text-primary) !important;
+  padding: 10px 12px 10px 42px !important;
+  font-size: 0.95rem;
+  height: 44px;
+  outline: none;
+  transition: all 0.25s ease;
+  width: 100%;
+}
+
+.cyber-input-wrapper input::placeholder {
+  color: rgba(255, 255, 255, 0.25) !important;
+}
+
+.cyber-input-wrapper input:focus,
+.cyber-input-wrapper select:focus {
+  border-color: #c084fc !important;
+  box-shadow: 0 0 12px rgba(168, 85, 247, 0.35);
+  background: rgba(15, 23, 42, 0.8) !important;
+}
+
+.cyber-input-wrapper .input-icon {
+  position: absolute;
+  left: 14px;
+  color: #c084fc;
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+.cyber-input-wrapper .input-icon-text {
+  position: absolute;
+  left: 16px;
+  color: #c084fc;
+  font-weight: 800;
+  font-size: 1.1rem;
+  pointer-events: none;
+}
+
+/* Custom Select */
+.cyber-select {
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23c084fc' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
+}
+
+/* Switch Toggle Styling */
+.cyber-switch {
+  position: relative;
+  display: inline-block;
+  width: 48px;
+  height: 24px;
+}
+
+.cyber-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.cyber-switch-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-default);
+  transition: .3s;
+  border-radius: 24px;
+}
+
+.cyber-switch-slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 2px;
+  bottom: 2px;
+  background-color: #cbd5e1;
+  transition: .3s;
+  border-radius: 50%;
+}
+
+.cyber-switch input:checked + .cyber-switch-slider {
+  background-color: #a855f7;
+  border-color: #c084fc;
+}
+
+.cyber-switch input:checked + .cyber-switch-slider:before {
+  transform: translateX(24px);
+  background-color: #ffffff;
+}
+
+/* Botón submit Cyberpunk con Glow */
+.btn-cyber-submit {
+  background: #090d16 !important;
+  color: #ffffff !important;
+  border: 2.5px solid #a855f7 !important;
+  border-radius: 30px !important;
+  font-size: 0.92rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.25s ease;
+  box-shadow: 0 0 20px rgba(168, 85, 247, 0.5);
+  margin-top: 14px;
+  width: 100%;
+}
+
+.btn-cyber-submit:active {
+  transform: translateY(2px) scale(0.97);
+  box-shadow: 0 0 10px rgba(168, 85, 247, 0.3);
+}
+
+.btn-cyber-submit:hover {
+  box-shadow: 0 0 25px rgba(168, 85, 247, 0.7);
+  border-color: #c084fc !important;
+}
+

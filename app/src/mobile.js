@@ -12,6 +12,22 @@ import {
   todayISO, monthKey, $, $$, showToast
 } from './utils.js';
 
+// ── Reminders & Fix Expenses Store Helper ──
+const REMINDERS_KEY = 'flujoDeCaja_reminders';
+
+function getReminders() {
+  const data = localStorage.getItem(REMINDERS_KEY);
+  return data ? JSON.parse(data) : [];
+}
+
+function saveReminders(reminders) {
+  localStorage.setItem(REMINDERS_KEY, JSON.stringify(reminders));
+}
+
+function normalizeStr(str) {
+  return str ? str.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") : "";
+}
+
 // ── App State ──
 const now = new Date();
 let currentYear = now.getFullYear();
@@ -30,6 +46,21 @@ async function bootMobile() {
     });
   }
 
+  // Config button (Gear icon)
+  const configBtn = $('#btn-config');
+  if (configBtn) {
+    configBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      openConfigModal();
+    });
+  }
+
+  // Close Config modal
+  $('#config-close').addEventListener('click', closeConfigModal);
+
+  // Submit Reminder Form
+  $('#reminder-form').addEventListener('submit', handleReminderSubmit);
+
   // Bind Month navigation
   $('#mobile-prev-month').addEventListener('click', () => {
     const nav = navigateMonth(currentYear, currentMonth, -1);
@@ -38,6 +69,7 @@ async function bootMobile() {
     renderMobileApp();
   });
 
+  // Month navigation next
   $('#mobile-next-month').addEventListener('click', () => {
     const nav = navigateMonth(currentYear, currentMonth, 1);
     currentYear = nav.year;
@@ -62,6 +94,7 @@ async function bootMobile() {
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       closeFormModal();
+      closeConfigModal();
       $('#confirm-overlay').classList.remove('active');
     }
   });
@@ -95,9 +128,12 @@ async function bootMobile() {
 
   // Initialize Supabase Authentication
   initAuth(async (user) => {
-    const displayEmail = user.email.split('@')[0];
-    $('#user-display').textContent = displayEmail;
-    showToast(`Hola, ${displayEmail}`, 'success');
+    const userDisplay = $('#user-display');
+    if (userDisplay) {
+      const displayEmail = user.email.split('@')[0];
+      userDisplay.textContent = displayEmail;
+    }
+    showToast('Bienvenido al sistema', 'success');
 
     // Rebuild local cache with Cloud DB data as source of truth
     const synced = await syncWithSupabase();
@@ -108,8 +144,179 @@ async function bootMobile() {
   });
 }
 
+// ── Reminders Operations ──
+function openConfigModal() {
+  $('#config-overlay').classList.add('active');
+  
+  // Set default values for switch
+  const activeCheckbox = $('#field-reminder-active');
+  if (activeCheckbox) {
+    activeCheckbox.checked = true;
+    const labelToggle = $('#label-toggle-recordar');
+    if (labelToggle) labelToggle.textContent = 'Sí';
+  }
+
+  // Bind active switch label change if not already done
+  const activeCheckboxEl = $('#field-reminder-active');
+  const labelToggleEl = $('#label-toggle-recordar');
+  if (activeCheckboxEl && labelToggleEl && !activeCheckboxEl._hasListener) {
+    activeCheckboxEl.addEventListener('change', () => {
+      labelToggleEl.textContent = activeCheckboxEl.checked ? 'Sí' : 'No';
+    });
+    activeCheckboxEl._hasListener = true;
+  }
+
+  renderRemindersList();
+}
+
+function closeConfigModal() {
+  $('#config-overlay').classList.remove('active');
+  $('#reminder-form').reset();
+}
+
+function handleReminderSubmit(e) {
+  e.preventDefault();
+  const concept = $('#field-reminder-concept').value.trim();
+  const day = parseInt($('#field-reminder-day').value) || 1;
+  const amount = parseFloat($('#field-reminder-amount').value) || 0;
+  const category = $('#field-reminder-category').value;
+  const active = $('#field-reminder-active').checked;
+
+  if (!concept) {
+    showToast('El concepto es requerido', 'error');
+    return;
+  }
+
+  const reminders = getReminders();
+  
+  // Prevents duplicates for same concept on the same day
+  const exists = reminders.some(r => normalizeStr(r.concept) === normalizeStr(concept) && r.day === day);
+  if (exists) {
+    showToast('Ya existe este recordatorio para este día', 'error');
+    return;
+  }
+
+  reminders.push({
+    id: Date.now().toString(),
+    concept,
+    day,
+    amount,
+    category,
+    active
+  });
+
+  saveReminders(reminders);
+  showToast('Recordatorio agregado', 'success');
+  $('#reminder-form').reset();
+  
+  // Reset active label representation
+  const labelToggle = $('#label-toggle-recordar');
+  if (labelToggle) labelToggle.textContent = 'Sí';
+  const activeCheckbox = $('#field-reminder-active');
+  if (activeCheckbox) activeCheckbox.checked = true;
+
+  renderRemindersList();
+  renderTicker();
+}
+
+function deleteReminder(id) {
+  const reminders = getReminders();
+  const filtered = reminders.filter(r => r.id !== id);
+  saveReminders(filtered);
+  showToast('Recordatorio eliminado', 'info');
+  
+  renderRemindersList();
+  renderTicker();
+}
+
+function renderRemindersList() {
+  const reminders = getReminders();
+  const container = $('#reminders-list');
+
+  if (reminders.length === 0) {
+    container.innerHTML = `<div class="empty-state" style="padding: 20px; font-size: 0.8rem;">No tienes recordatorios fijos registrados.</div>`;
+    return;
+  }
+
+  reminders.sort((a, b) => a.day - b.day);
+
+  container.innerHTML = reminders.map(r => `
+    <div class="reminder-item" data-id="${r.id}">
+      <div class="reminder-info">
+        <span class="reminder-concept">${escapeHtml(r.concept)}</span>
+        <span class="reminder-meta">Día ${r.day} • ${escapeHtml(r.category || 'Vivienda')} ${r.amount > 0 ? `• Est: $${r.amount.toFixed(2)}` : ''} • Recordar: ${r.active ? 'Sí' : 'No'}</span>
+      </div>
+      <button class="btn-delete-reminder" title="Eliminar" data-action="delete-reminder">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="3 6 5 6 21 6"></polyline>
+          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+        </svg>
+      </button>
+    </div>
+  `).join('');
+
+  container.querySelectorAll('[data-action="delete-reminder"]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const item = e.target.closest('.reminder-item');
+      const id = item.dataset.id;
+      deleteReminder(id);
+    });
+  });
+}
+
+function renderTicker() {
+  const reminders = getReminders();
+  const expenses = getExpenses(currentYear, currentMonth);
+  const tickerScroll = $('#ticker-scroll');
+
+  if (reminders.length === 0) {
+    tickerScroll.innerHTML = `💡 Configura tus gastos fijos mensuales en el botón ⚙️ de arriba para recibir alertas automáticas.`;
+    tickerScroll.style.animationDuration = '18s';
+    return;
+  }
+
+  const systemYear = now.getFullYear();
+  const systemMonth = now.getMonth() + 1;
+  const systemDay = now.getDate();
+
+  const alerts = reminders.map(r => {
+    // Check if there is an expense recorded in the selected month that matches this concept
+    const isPaid = expenses.some(exp => normalizeStr(exp.concept).includes(normalizeStr(r.concept)));
+
+    if (isPaid) {
+      return `<div class="ticker-item"><span class="ticker-badge-done">✅ AL DÍA:</span> <span>${escapeHtml(r.concept)} registrado</span></div>`;
+    }
+
+    // Determine status (Pending vs Overdue) based on selected month compared to actual system date
+    let isOverdue = false;
+    if (currentYear < systemYear || (currentYear === systemYear && currentMonth < systemMonth)) {
+      isOverdue = true; // Selected month is in the past, and it was never paid
+    } else if (currentYear === systemYear && currentMonth === systemMonth) {
+      isOverdue = systemDay > r.day; // Current month, but day has already passed
+    }
+
+    if (isOverdue) {
+      return `<div class="ticker-item"><span class="ticker-badge-overdue">🚨 VENCIDO:</span> <span>${escapeHtml(r.concept)} (Día ${r.day}) - ¡Registra el gasto!</span></div>`;
+    } else {
+      return `<div class="ticker-item"><span class="ticker-badge-pending">⚠️ PENDIENTE:</span> <span>${escapeHtml(r.concept)} (Día ${r.day})${r.amount > 0 ? ` - Est: $${r.amount.toFixed(2)}` : ''}</span></div>`;
+    }
+  });
+
+  // Join items with horizontal bars
+  const tickerHtml = alerts.join(' <span class="ticker-item-separator">|</span> ');
+  tickerScroll.innerHTML = tickerHtml;
+
+  // Dynamically scale animation speed based on text length for readable flow
+  const textLength = tickerScroll.innerText.length;
+  const duration = Math.max(12, Math.round(textLength / 8));
+  tickerScroll.style.animationDuration = `${duration}s`;
+}
+
 // ── Render ──
 function renderMobileApp() {
+  // Render alerts ticker
+  renderTicker();
+
   // Update Month Label
   $('#mobile-month-label').textContent = formatMonthLabel(currentYear, currentMonth);
 

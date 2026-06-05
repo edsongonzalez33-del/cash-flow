@@ -54,7 +54,7 @@ async function boot() {
 
   // Initialize Supabase Auth
   initAuth(async (user) => {
-    showToast(`Bienvenido, ${user.email}`, 'success');
+    showToast('Bienvenido al sistema', 'success');
     
     // La nube (Supabase) es la única fuente de la verdad al iniciar sesión.
     // Descargamos los datos y sobrescribimos lo local.
