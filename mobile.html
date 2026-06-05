@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="description" content="Flujo de Caja - Versión optimizada para móviles" />
+  <meta name="theme-color" content="#04060f" />
+  <title>Flujo Caja Móvil</title>
+
+  <!-- PWA Manifest & Service Worker -->
+  <link rel="manifest" href="/cash-flow/manifest.json" />
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/cash-flow/sw.js')
+          .then(reg => console.log('SW Móvil registrado:', reg.scope))
+          .catch(err => console.error('Error SW Móvil:', err));
+      });
+    }
+  </script>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script type="module" crossorigin src="/cash-flow/assets/mobile-CpO2UREB.js"></script>
+  <link rel="modulepreload" crossorigin href="/cash-flow/assets/auth-B5UWOyZO.js">
+  <link rel="stylesheet" crossorigin href="/cash-flow/assets/mobile-BC3GSCRZ.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- ===================== HEADER ===================== -->
+    <header class="app-header">
+      <div class="header-brand">
+        <div class="brand-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <line x1="12" y1="1" x2="12" y2="23"></line>
+            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+          </svg>
+        </div>
+        <div class="brand-title">
+          <h2>Flujo Caja</h2>
+          <span class="badge-user" id="user-display">Cargando...</span>
+        </div>
+      </div>
+      <button class="btn-logout" id="btn-logout" aria-label="Cerrar sesión">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+          <polyline points="16 17 21 12 16 7"></polyline>
+          <line x1="21" y1="12" x2="9" y2="12"></line>
+        </svg>
+      </button>
+    </header>
+
+    <!-- ===================== MONTH SELECTOR ===================== -->
+    <section class="month-selector-section">
+      <div class="month-selector">
+        <button class="btn-month-nav" id="mobile-prev-month" aria-label="Mes anterior">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
+        </button>
+        <span class="month-label" id="mobile-month-label">Junio 2026</span>
+        <button class="btn-month-nav" id="mobile-next-month" aria-label="Mes siguiente">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </button>
+      </div>
+    </section>
+
+    <!-- ===================== QUICK ACTIONS (GIANT BUTTONS) ===================== -->
+    <section class="quick-actions-section">
+      <button class="btn-giant btn-giant-income" id="btn-add-income">
+        <div class="btn-giant-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+        </div>
+        <div class="btn-giant-text">
+          <span class="btn-subtitle">Registrar</span>
+          <span class="btn-title">NUEVO INGRESO</span>
+        </div>
+      </button>
+
+      <button class="btn-giant btn-giant-expense" id="btn-add-expense">
+        <div class="btn-giant-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+        </div>
+        <div class="btn-giant-text">
+          <span class="btn-subtitle">Registrar</span>
+          <span class="btn-title">NUEVO GASTO</span>
+        </div>
+      </button>
+    </section>
+
+    <!-- ===================== KEY KPIs ===================== -->
+    <section class="kpis-section">
+      <div class="kpi-card kpi-balance">
+        <span class="kpi-label">Saldo Neto del Mes</span>
+        <span class="kpi-value" id="kpi-balance">$0.00</span>
+      </div>
+      <div class="kpi-row">
+        <div class="kpi-card kpi-income">
+          <span class="kpi-label">Ingresos</span>
+          <span class="kpi-value" id="kpi-income">$0.00</span>
+        </div>
+        <div class="kpi-card kpi-expense">
+          <span class="kpi-label">Gastos</span>
+          <span class="kpi-value" id="kpi-expense">$0.00</span>
+        </div>
+      </div>
+      <div class="kpi-card kpi-commissions" id="kpi-commissions-card" style="display: none;">
+        <span class="kpi-label">Comisiones Pendientes</span>
+        <span class="kpi-value" id="kpi-commissions">$0.00</span>
+      </div>
+    </section>
+
+    <!-- ===================== RECENT TRANSACTIONS ===================== -->
+    <section class="transactions-section">
+      <div class="section-title-row">
+        <h3>Transacciones del Mes</h3>
+        <span class="transaction-count" id="trans-count">0 items</span>
+      </div>
+
+      <div class="transactions-list" id="transactions-list">
+        <!-- Rendered dynamically -->
+        <div class="loading-state">Cargando transacciones...</div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ===================== MODAL FORM (ADD/EDIT) ===================== -->
+  <div class="modal-overlay" id="modal-overlay">
+    <div class="modal-bottom-sheet" id="modal-sheet">
+      <div class="modal-drag-indicator"></div>
+      <div class="modal-header">
+        <h3 id="modal-title">Nuevo Registro</h3>
+        <button class="btn-close-modal" id="modal-close" aria-label="Cerrar">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <form id="modal-form" class="modal-form">
+        <!-- Hidden input for type -->
+        <input type="hidden" id="field-type" value="income" />
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label for="field-date">Fecha</label>
+            <input type="date" id="field-date" required />
+          </div>
+          <div class="form-group">
+            <label for="field-amount">Monto ($)</label>
+            <input type="number" id="field-amount" step="0.01" min="0" placeholder="0.00" inputmode="decimal" required />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="field-exchange-rate">Tasa Cambio BCV (Bs./$)</label>
+            <input type="number" id="field-exchange-rate" step="0.01" min="0" placeholder="Ej: 45.50" inputmode="decimal" />
+          </div>
+          <div class="form-group">
+            <label for="field-amount-bs">Monto Bolívares (Bs.)</label>
+            <input type="number" id="field-amount-bs" step="0.01" min="0" placeholder="0.00" readonly class="readonly-input" />
+          </div>
+        </div>
+
+        <!-- Concept/Company field label will change dynamically -->
+        <div class="form-group">
+          <label for="field-concept" id="label-concept">Compañía / Origen</label>
+          <input type="text" id="field-concept" required placeholder="Ej: Oceánica, Mercantil..." />
+        </div>
+
+        <!-- Expenses specific type field (gasto fijo vs variable) -->
+        <div class="form-group" id="group-expense-type" style="display: none;">
+          <label for="field-expense-type">Tipo de Gasto</label>
+          <select id="field-expense-type" class="form-select">
+            <option value="variable" selected>Variable</option>
+            <option value="fijo">Fijo</option>
+          </select>
+        </div>
+
+        <!-- Incomes specific commission panel -->
+        <div class="commission-panel-toggle" id="group-commission-toggle">
+          <label class="checkbox-container">
+            <input type="checkbox" id="field-commission-active" />
+            <span>¿Aplica comisión a terceros?</span>
+          </label>
+        </div>
+
+        <div class="commission-panel" id="commission-panel" style="display: none;">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="field-commission-recipient">Beneficiario</label>
+              <select id="field-commission-recipient" class="form-select">
+                <option value="">Selecciona beneficiario</option>
+                <option value="María Hortencia">María Hortencia</option>
+                <option value="Luisa Velásquez">Luisa Velásquez</option>
+                <option value="Freddy">Freddy</option>
+                <option value="Zitiu">Zitiu</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="field-commission-status">Estado</label>
+              <select id="field-commission-status" class="form-select">
+                <option value="pendiente" selected>Pendiente</option>
+                <option value="pagado">Pagado</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="field-commission-pct">Comisión %</label>
+              <input type="number" id="field-commission-pct" step="0.1" min="0" max="100" placeholder="Ej: 10" inputmode="decimal" />
+            </div>
+            <div class="form-group">
+              <label for="field-commission-amount">Monto Comisión ($)</label>
+              <input type="number" id="field-commission-amount" step="0.01" min="0" placeholder="0.00" inputmode="decimal" />
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="field-notes">Observaciones</label>
+          <textarea id="field-notes" placeholder="Notas opcionales o cálculo automático"></textarea>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn-cancel" id="modal-cancel">Cancelar</button>
+          <button type="submit" class="btn-submit" id="modal-submit">Guardar Registro</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ===================== CONFIRM DELETE MODAL ===================== -->
+  <div class="modal-overlay modal-confirm-overlay" id="confirm-overlay">
+    <div class="modal-confirm">
+      <h3>¿Eliminar registro?</h3>
+      <p>Esta acción es permanente y se actualizará en la nube de Supabase.</p>
+      <div class="confirm-actions">
+        <button class="btn-cancel" id="confirm-cancel">Cancelar</button>
+        <button class="btn-danger" id="confirm-delete">Eliminar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast system -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- App Logic Entrypoint -->
+</body>
+</html>

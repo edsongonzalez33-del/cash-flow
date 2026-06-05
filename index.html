@@ -4,12 +4,34 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="Aplicación de gestión de flujo de caja personal - Controla tus ingresos y gastos mensuales" />
+  <meta name="theme-color" content="#04060f" />
   <title>Flujo de Caja | Panel de Control</title>
+  
+  <!-- Redirección móvil automática -->
+  <script>
+    if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768) {
+      window.location.replace('mobile.html');
+    }
+  </script>
+
+  <!-- PWA Manifest & Service Worker -->
+  <link rel="manifest" href="/cash-flow/manifest.json" />
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/cash-flow/sw.js')
+          .then(reg => console.log('Service Worker registrado con éxito:', reg.scope))
+          .catch(err => console.error('Error al registrar Service Worker:', err));
+      });
+    }
+  </script>
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  <script type="module" crossorigin src="/cash-flow/assets/index-D7S3skkQ.js"></script>
-  <link rel="stylesheet" crossorigin href="/cash-flow/assets/index-zj_O9eyn.css">
+  <script type="module" crossorigin src="/cash-flow/assets/main-BEzCosI0.js"></script>
+  <link rel="modulepreload" crossorigin href="/cash-flow/assets/auth-B5UWOyZO.js">
+  <link rel="stylesheet" crossorigin href="/cash-flow/assets/main-zj_O9eyn.css">
 </head>
 <body>
   <!-- ===================== SIDEBAR ===================== -->
