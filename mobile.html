@@ -23,9 +23,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  <script type="module" crossorigin src="/cash-flow/assets/mobile-CpO2UREB.js"></script>
+  <script type="module" crossorigin src="/cash-flow/assets/mobile-Rk8IIci-.js"></script>
   <link rel="modulepreload" crossorigin href="/cash-flow/assets/auth-B5UWOyZO.js">
-  <link rel="stylesheet" crossorigin href="/cash-flow/assets/mobile-BC3GSCRZ.css">
+  <link rel="stylesheet" crossorigin href="/cash-flow/assets/mobile-fDwsA-CH.css">
 </head>
 <body>
   <div class="app-container">
@@ -33,27 +33,50 @@
     <header class="app-header">
       <div class="header-brand">
         <div class="brand-icon">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-            <line x1="12" y1="1" x2="12" y2="23"></line>
-            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
-          </svg>
+          <img src="icon-192.png" alt="Logo Flujo Caja" style="width: 100%; height: 100%; object-fit: cover; border-radius: inherit;" />
         </div>
         <div class="brand-title">
           <h2>Flujo Caja</h2>
-          <span class="badge-user" id="user-display">Cargando...</span>
         </div>
       </div>
-      <button class="btn-logout" id="btn-logout" aria-label="Cerrar sesión">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-          <polyline points="16 17 21 12 16 7"></polyline>
-          <line x1="21" y1="12" x2="9" y2="12"></line>
-        </svg>
-      </button>
+      <div class="header-actions">
+        <button class="btn-config" id="btn-config" aria-label="Configuración">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+        </button>
+        <button class="btn-logout" id="btn-logout" aria-label="Cerrar sesión">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+            <polyline points="16 17 21 12 16 7"></polyline>
+            <line x1="21" y1="12" x2="9" y2="12"></line>
+          </svg>
+        </button>
+      </div>
     </header>
 
-    <!-- ===================== MONTH SELECTOR ===================== -->
-    <section class="month-selector-section">
+    <!-- ===================== TICKER RECORDATORIOS ===================== -->
+    <section class="ticker-section" id="ticker-section">
+      <div class="ticker-wrapper">
+        <div class="ticker-title">ALERTAS</div>
+        <div class="ticker-content" id="ticker-content">
+          <div class="ticker-scroll" id="ticker-scroll">Cargando alertas de gastos fijos...</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== CONTROLES SUPERIORES (MES Y ACCIONES) ===================== -->
+    <section class="top-controls-section">
+      <!-- Botón Ingresos (Izquierda) -->
+      <button class="btn-round-action btn-round-income" id="btn-add-income" aria-label="Registrar Nuevo Ingreso">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4">
+          <line x1="12" y1="5" x2="12" y2="19"></line>
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+      </button>
+
+      <!-- Selector de Mes (Centro) -->
       <div class="month-selector">
         <button class="btn-month-nav" id="mobile-prev-month" aria-label="Mes anterior">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
@@ -63,33 +86,12 @@
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
         </button>
       </div>
-    </section>
 
-    <!-- ===================== QUICK ACTIONS (GIANT BUTTONS) ===================== -->
-    <section class="quick-actions-section">
-      <button class="btn-giant btn-giant-income" id="btn-add-income">
-        <div class="btn-giant-icon">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-            <line x1="12" y1="5" x2="12" y2="19"></line>
-            <line x1="5" y1="12" x2="19" y2="12"></line>
-          </svg>
-        </div>
-        <div class="btn-giant-text">
-          <span class="btn-subtitle">Registrar</span>
-          <span class="btn-title">NUEVO INGRESO</span>
-        </div>
-      </button>
-
-      <button class="btn-giant btn-giant-expense" id="btn-add-expense">
-        <div class="btn-giant-icon">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-            <line x1="5" y1="12" x2="19" y2="12"></line>
-          </svg>
-        </div>
-        <div class="btn-giant-text">
-          <span class="btn-subtitle">Registrar</span>
-          <span class="btn-title">NUEVO GASTO</span>
-        </div>
+      <!-- Botón Gastos (Derecha) -->
+      <button class="btn-round-action btn-round-expense" id="btn-add-expense" aria-label="Registrar Nuevo Gasto">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4">
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
       </button>
     </section>
 
@@ -246,6 +248,102 @@
       <div class="confirm-actions">
         <button class="btn-cancel" id="confirm-cancel">Cancelar</button>
         <button class="btn-danger" id="confirm-delete">Eliminar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== CONFIG / REMINDERS MODAL ===================== -->
+  <div class="modal-overlay" id="config-overlay">
+    <div class="modal-bottom-sheet" id="config-sheet" style="max-height: 90vh; background: rgba(13, 17, 29, 0.95); border: 1px solid rgba(168, 85, 247, 0.35); position: relative; padding: 24px 20px;">
+      <!-- Botón de Cerrar X en la esquina superior derecha -->
+      <button class="btn-close-modal" id="config-close" aria-label="Cerrar" style="position: absolute; top: 16px; right: 16px; color: #c084fc; z-index: 10;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+
+      <div class="config-modal-body" style="display: flex; flex-direction: column; gap: 20px;">
+        <!-- Form to Add/Edit Reminder -->
+        <form id="reminder-form" class="cyber-form">
+          <h2 class="cyber-title">NUEVO RECORDATORIO<br>MENSUAL</h2>
+          <p class="cyber-subtitle">Configura un gasto fijo recurrente.</p>
+          
+          <div class="form-group cyber-group">
+            <label for="field-reminder-concept">Gasto Fijo / Concepto</label>
+            <div class="cyber-input-wrapper">
+              <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="7" r="4"></circle>
+                <path d="M5.5 21a8.5 8.5 0 0 1 13 0"></path>
+              </svg>
+              <input type="text" id="field-reminder-concept" placeholder="Pago Alquiler Hogar" required />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group cyber-group">
+              <label for="field-reminder-day">Día de Pago (1-31)</label>
+              <div class="cyber-input-wrapper">
+                <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                  <line x1="16" y1="2" x2="16" y2="6"></line>
+                  <line x1="8" y1="2" x2="8" y2="6"></line>
+                  <line x1="3" y1="10" x2="21" y2="10"></line>
+                </svg>
+                <input type="number" id="field-reminder-day" min="1" max="31" placeholder="10" required inputmode="numeric" />
+              </div>
+            </div>
+
+            <div class="form-group cyber-group">
+              <label for="field-reminder-amount">Monto Estimado ($)</label>
+              <div class="cyber-input-wrapper">
+                <span class="input-icon-text">$</span>
+                <input type="number" id="field-reminder-amount" min="0" step="0.01" placeholder="1.250,00" inputmode="decimal" />
+              </div>
+            </div>
+          </div>
+
+          <div class="form-row" style="margin-bottom: 4px; align-items: center;">
+            <div class="form-group cyber-group" style="flex: 1.2;">
+              <label for="field-reminder-category">Categoría</label>
+              <div class="cyber-input-wrapper">
+                <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                  <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                </svg>
+                <select id="field-reminder-category" class="cyber-select">
+                  <option value="Vivienda" selected>Vivienda</option>
+                  <option value="Servicios">Servicios</option>
+                  <option value="Suscripciones">Suscripciones</option>
+                  <option value="Educación">Educación</option>
+                  <option value="Otros">Otros</option>
+                </select>
+              </div>
+            </div>
+            
+            <div class="form-group cyber-group" style="flex: 0.8; align-items: flex-end;">
+              <label style="margin-right: 18px; white-space: nowrap;">Recordarme</label>
+              <div style="display: flex; align-items: center; gap: 8px; margin-top: 10px; margin-right: 6px;">
+                <span style="font-size: 0.82rem; font-weight: 600; color: var(--text-secondary);" id="label-toggle-recordar">Sí</span>
+                <label class="cyber-switch">
+                  <input type="checkbox" id="field-reminder-active" checked />
+                  <span class="cyber-switch-slider"></span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <button type="submit" class="btn-cyber-submit">GUARDAR RECORDATORIO</button>
+        </form>
+
+        <!-- Reminders List -->
+        <div class="reminders-list-container">
+          <h4 style="font-size: 0.82rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 12px; letter-spacing: 0.03em;">Recordatorios Activos</h4>
+          <div id="reminders-list" style="display: flex; flex-direction: column; gap: 10px;">
+            <!-- Rendered dynamically -->
+            <div class="empty-state" style="padding: 20px; font-size: 0.8rem;">No tienes recordatorios fijos registrados.</div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
