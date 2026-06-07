@@ -198,6 +198,23 @@ function normalizeConceptStr(concept) {
   const trimmed = concept.trim();
   const lower = trimmed.toLowerCase();
 
+  // 0. Check commissions first to prevent collision with payroll normalization
+  if (lower.includes('comision') || lower.includes('comisión') || lower.includes('comisiones') || lower.includes('3ros')) {
+    if (lower.includes('hortencia')) {
+      return 'Comisiones 3ros (María Hortencia)';
+    }
+    if (lower.includes('freder') || lower.includes('freddy')) {
+      return 'Comisiones 3ros (Freddy)';
+    }
+    if (lower.includes('luisa')) {
+      return 'Comisiones 3ros (Luisa Velásquez)';
+    }
+    if (lower.includes('zitiu')) {
+      return 'Comisiones 3ros (Zitiu)';
+    }
+    return trimmed;
+  }
+
   // 1. Check payroll (Nómina) first using fuzzy includes
   if (lower.includes('berelitza') || lower.includes('bere')) {
     return 'Nómina: Berelitza';
@@ -320,11 +337,35 @@ function migrateAndNormalizeStore(store) {
     for (const [monthKey, list] of Object.entries(store.expenses)) {
       for (const e of list) {
         if (!e.concept) continue;
+        
+        let changed = false;
+        const lowerNotes = (e.notes || '').toLowerCase();
+        
+        // Corrección de registros históricos erróneamente normalizados como nómina
+        if (e.concept === 'Nómina: María Hortencia' && (e.type === 'variable' || lowerNotes.includes('[id-ingreso:'))) {
+          e.concept = 'Comisiones 3ros (María Hortencia)';
+          changed = true;
+          migrated = true;
+        }
+
         const oldConcept = e.concept;
         const normalized = normalizeConceptStr(oldConcept);
         if (normalized !== oldConcept) {
           e.concept = normalized;
+          changed = true;
           migrated = true;
+        }
+
+        if (changed) {
+          // Sincronizar corrección en Supabase en segundo plano
+          supabase.auth.getSession().then(({ data: { session } }) => {
+            if (session) {
+              const dbRow = mapExpenseToDB(e, session.user.id);
+              supabase.from('expenses').upsert(dbRow).then(({ error }) => {
+                if (error) console.error('Error syncing migrated expense:', error);
+              });
+            }
+          });
         }
       }
     }
@@ -504,6 +545,123 @@ export function deleteExpense(year, month, id) {
   });
 }
 
+/**
+ * Sincroniza el gasto de comisión asociado a un ingreso en localStorage y Supabase
+ */
+function syncCommissionExpense(income) {
+  const store = getStore();
+  const incomeId = income.id;
+  const tag = `[ID-Ingreso: ${incomeId}]`;
+  
+  // Buscar si ya existe un gasto con este tag en todo el store
+  let foundExpense = null;
+  let foundMonthKey = null;
+  let foundIdx = -1;
+
+  for (const [mKey, expensesList] of Object.entries(store.expenses)) {
+    const idx = expensesList.findIndex(e => e.notes && e.notes.includes(tag));
+    if (idx !== -1) {
+      foundExpense = expensesList[idx];
+      foundMonthKey = mKey;
+      foundIdx = idx;
+      break;
+    }
+  }
+
+  const isCommissionPaid = income.commissionActive && income.commissionStatus === 'pagado' && (income.commissionAmount || 0) > 0;
+
+  if (isCommissionPaid) {
+    const recipient = income.commissionRecipient || 'Tercero';
+    const commAmount = parseFloat(income.commissionAmount || 0);
+    const rate = parseFloat(income.exchangeRate || 0);
+    const amountBs = commAmount * rate;
+    const [y, m] = income.date.split('-').map(Number);
+    const targetMonthKey = monthKey(y, m);
+
+    const expenseData = {
+      date: income.date,
+      concept: `Comisiones 3ros (${recipient})`,
+      amount: commAmount,
+      exchangeRate: rate,
+      amountBs: amountBs,
+      type: 'variable',
+      notes: `Pago comisión a ${recipient} por ingreso de ${income.company}. Tasa: ${rate.toFixed(2)} ${tag}`
+    };
+
+    if (foundExpense) {
+      // Actualizar el gasto existente
+      const updatedExpense = { ...foundExpense, ...expenseData };
+      
+      if (foundMonthKey !== targetMonthKey) {
+        // Mover de mes
+        store.expenses[foundMonthKey].splice(foundIdx, 1);
+        if (store.expenses[foundMonthKey].length === 0) {
+          delete store.expenses[foundMonthKey];
+        }
+        if (!store.expenses[targetMonthKey]) {
+          store.expenses[targetMonthKey] = [];
+        }
+        store.expenses[targetMonthKey].push(updatedExpense);
+      } else {
+        // Actualizar en el mismo mes
+        store.expenses[foundMonthKey][foundIdx] = updatedExpense;
+      }
+      
+      saveStore(store);
+
+      // Sincronizar en Supabase
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session) {
+          const dbRow = mapExpenseToDB(updatedExpense, session.user.id);
+          supabase.from('expenses').upsert(dbRow).then(({ error }) => {
+            if (error) console.error('Error syncing updated commission expense:', error);
+          });
+        }
+      });
+    } else {
+      // Crear un nuevo gasto
+      const newExpense = {
+        id: uuid(),
+        ...expenseData
+      };
+      
+      if (!store.expenses[targetMonthKey]) {
+        store.expenses[targetMonthKey] = [];
+      }
+      store.expenses[targetMonthKey].push(newExpense);
+      saveStore(store);
+
+      // Sincronizar en Supabase
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session) {
+          const dbRow = mapExpenseToDB(newExpense, session.user.id);
+          supabase.from('expenses').insert(dbRow).then(({ error }) => {
+            if (error) console.error('Error syncing new commission expense:', error);
+          });
+        }
+      });
+    }
+  } else {
+    // Si no está pagada o no está activa, pero existía un gasto previo, lo eliminamos
+    if (foundExpense) {
+      store.expenses[foundMonthKey].splice(foundIdx, 1);
+      if (store.expenses[foundMonthKey].length === 0) {
+        delete store.expenses[foundMonthKey];
+      }
+      saveStore(store);
+
+      // Sincronizar eliminación en Supabase
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session) {
+          supabase.from('expenses').delete().eq('id', foundExpense.id).then(({ error }) => {
+            if (error) console.error('Error syncing deleted commission expense:', error);
+          });
+        }
+      });
+    }
+  }
+}
+
 // ── INCOMES CRUD ──
 
 export function getIncomes(year, month) {
@@ -531,6 +689,9 @@ export function addIncome(year, month, income) {
       });
     }
   });
+
+  // Sincronizar el gasto de comisión correspondiente si aplica
+  syncCommissionExpense(entry);
 
   return entry;
 }
@@ -583,6 +744,9 @@ export function updateIncome(year, month, id, updates) {
       }
     });
 
+    // Sincronizar el gasto de comisión correspondiente si aplica
+    syncCommissionExpense(updated);
+
     return updated;
   }
   return null;
@@ -607,9 +771,13 @@ export function deleteIncome(year, month, id) {
   }
 
   if (idx !== -1) {
+    const income = list[idx];
     list.splice(idx, 1);
     if (list.length === 0) delete store.incomes[key];
     saveStore(store);
+    
+    // Forzar la eliminación de cualquier gasto de comisión asociado
+    syncCommissionExpense({ ...income, commissionActive: false });
   }
 
   // Sync to Supabase in background
@@ -697,6 +865,11 @@ export function payCommission(incomeId, ratePaid) {
   }
 
   foundIncome.commissionStatus = 'pagado';
+  if (!foundIncome.exchangeRate || foundIncome.exchangeRate === 0) {
+    foundIncome.exchangeRate = parseFloat(ratePaid) || 0;
+    foundIncome.amountBs = foundIncome.amount * foundIncome.exchangeRate;
+  }
+  
   saveStore(store);
 
   // Sync income update to Supabase in background
@@ -709,26 +882,9 @@ export function payCommission(incomeId, ratePaid) {
     }
   });
 
-  // Add the corresponding expense
-  const today = todayISO();
-  const [y, m] = today.split('-').map(Number);
+  // Sincronizar el gasto de comisión utilizando la nueva función enlazada
+  syncCommissionExpense(foundIncome);
   
-  const recipient = foundIncome.commissionRecipient || 'Tercero';
-  const commAmount = parseFloat(foundIncome.commissionAmount || 0);
-  const rate = parseFloat(ratePaid) || 0;
-  const amountBs = commAmount * rate;
-  
-  const expense = {
-    date: today,
-    concept: `Comisiones 3ros (${recipient})`,
-    amount: commAmount,
-    exchangeRate: rate,
-    amountBs: amountBs,
-    type: 'variable',
-    notes: `Pago comisión a ${recipient} por ingreso de ${foundIncome.company}. Tasa: ${rate.toFixed(2)}`
-  };
-
-  addExpense(y, m, expense); // This handles its own Supabase sync in background
   return foundIncome;
 }
 

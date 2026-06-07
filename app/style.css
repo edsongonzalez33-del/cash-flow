@@ -1042,6 +1042,19 @@ h1, h2, h3, h4 {
   box-shadow: var(--shadow-lg);
   transform: scale(0.95) translateY(10px);
   transition: transform var(--transition-slow);
+  display: flex;
+  flex-direction: column;
+  max-height: 85vh;
+  min-height: 0;
+  overflow: hidden;
+}
+
+#modal-form {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex: 1;
+  min-height: 0;
 }
 
 .modal-overlay.active .modal {
@@ -1085,6 +1098,9 @@ h1, h2, h3, h4 {
   display: flex;
   flex-direction: column;
   gap: 18px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
 }
 
 .form-group {

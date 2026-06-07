@@ -240,7 +240,7 @@ function openIncomeModal(income = null) {
       <div class="form-row" style="margin-bottom: 10px;">
         <div class="form-group">
           <label for="field-commission-pct">Porcentaje Comisión (%)</label>
-          <input type="number" id="field-commission-pct" value="${income?.commissionPct || ''}" step="0.1" min="0" max="100" placeholder="Ej: 10" style="height: 38px;" />
+          <input type="number" id="field-commission-pct" value="${income?.commissionPct || ''}" step="0.01" min="0" max="100" placeholder="Ej: 10" style="height: 38px;" />
         </div>
         <div class="form-group">
           <label for="field-commission-amount">Monto Comisión ($)</label>
@@ -311,7 +311,7 @@ function openIncomeModal(income = null) {
       } else {
         if (amount > 0) {
           pct = (commAmount / amount) * 100;
-          pctField.value = pct > 0 ? pct.toFixed(1) : '';
+          pctField.value = pct > 0 ? pct.toFixed(2) : '';
         }
       }
       commLabel.textContent = `$${commAmount.toFixed(2)}`;
@@ -328,7 +328,7 @@ function openIncomeModal(income = null) {
       if (activeCheckbox.checked && commAmount > 0) {
         const recipient = recipientField.value || '[Beneficiario]';
         const status = statusField.value === 'pagado' ? 'pagada' : 'pendiente';
-        noteText += `. Comisión del ${pct.toFixed(1)}% ($${commAmount.toFixed(2)}) a ${recipient} ${status}`;
+        noteText += `. Comisión del ${pct.toFixed(2)}% ($${commAmount.toFixed(2)}) a ${recipient} ${status}`;
       }
       
       notesField.value = noteText;

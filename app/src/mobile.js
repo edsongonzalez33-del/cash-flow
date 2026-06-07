@@ -576,7 +576,7 @@ function setupFormCalculations(type) {
       } else {
         if (amount > 0) {
           pct = (commAmount / amount) * 100;
-          commPctField.value = pct > 0 ? pct.toFixed(1) : '';
+          commPctField.value = pct > 0 ? pct.toFixed(2) : '';
         }
       }
     }
@@ -592,7 +592,7 @@ function setupFormCalculations(type) {
       if (type === 'income' && commCheckbox.checked && commAmount > 0) {
         const recipient = commRecipient.value || '[Beneficiario]';
         const status = commStatus.value === 'pagado' ? 'pagada' : 'pendiente';
-        noteText += `. Comisión del ${pct.toFixed(1)}% ($${commAmount.toFixed(2)}) a ${recipient} ${status}`;
+        noteText += `. Comisión del ${pct.toFixed(2)}% ($${commAmount.toFixed(2)}) a ${recipient} ${status}`;
       }
       
       notesField.value = noteText;
