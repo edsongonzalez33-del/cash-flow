@@ -677,7 +677,8 @@ function renderCommissionsDestinatarioChart() {
     'María Hortencia': 0,
     'Luisa Velásquez': 0,
     'Freddy': 0,
-    'Zitiu': 0
+    'Zitiu': 0,
+    'Esmyll León': 0
   };
   
   for (const item of paidData.list) {
@@ -691,7 +692,7 @@ function renderCommissionsDestinatarioChart() {
   
   const labels = Object.keys(sums);
   const data = Object.values(sums);
-  const colors = ['#8B5CF6', '#EC4899', '#3B82F6', '#10B981']; // Violet, Pink, Blue, Green
+  const colors = ['#8B5CF6', '#EC4899', '#3B82F6', '#10B981', '#F59E0B']; // Violet, Pink, Blue, Green, Orange
   
   const ctx = document.getElementById('chart-commissions-destinatario');
   const themeColors = getChartColors();

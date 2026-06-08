@@ -212,6 +212,9 @@ function normalizeConceptStr(concept) {
     if (lower.includes('zitiu')) {
       return 'Comisiones 3ros (Zitiu)';
     }
+    if (lower.includes('esmyll') || lower.includes('león') || lower.includes('leon')) {
+      return 'Comisiones 3ros (Esmyll León)';
+    }
     return trimmed;
   }
 

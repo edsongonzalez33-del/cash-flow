@@ -226,6 +226,7 @@ function openIncomeModal(income = null) {
             <option value="Luisa Velásquez" ${income?.commissionRecipient === 'Luisa Velásquez' ? 'selected' : ''}>Luisa Velásquez</option>
             <option value="Freddy" ${income?.commissionRecipient === 'Freddy' ? 'selected' : ''}>Freddy</option>
             <option value="Zitiu" ${income?.commissionRecipient === 'Zitiu' ? 'selected' : ''}>Zitiu</option>
+            <option value="Esmyll León" ${income?.commissionRecipient === 'Esmyll León' ? 'selected' : ''}>Esmyll León</option>
           </select>
         </div>
         <div class="form-group">
