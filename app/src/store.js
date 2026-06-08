@@ -8,6 +8,15 @@ const STORAGE_KEY = 'flujoDeCaja_data';
 const SEED_VERSION_KEY = 'flujoDeCaja_seedVersion';
 const CURRENT_SEED_VERSION = 6; // Bump this to force re-import of seed data
 
+function checkAuthError(error) {
+  if (!error) return;
+  const msg = (error.message || '').toLowerCase();
+  if (error.status === 401 || error.status === 403 || msg.includes('jwt') || msg.includes('token') || msg.includes('invalid user') || msg.includes('unauthorized') || msg.includes('invalid claim')) {
+    console.warn('Auth token expired or invalid, triggering logout event');
+    window.dispatchEvent(new CustomEvent('auth-expired'));
+  }
+}
+
 /**
  * Internal data structure (localStorage Cache):
  * {
@@ -100,6 +109,7 @@ export async function syncWithSupabase() {
 
     if (incError) {
       console.error('Error syncing incomes:', incError);
+      checkAuthError(incError);
       return false;
     }
 
@@ -111,6 +121,7 @@ export async function syncWithSupabase() {
 
     if (expError) {
       console.error('Error syncing expenses:', expError);
+      checkAuthError(expError);
       return false;
     }
 
@@ -451,6 +462,7 @@ export async function addExpense(year, month, expense) {
   const { error } = await supabase.from('expenses').insert(dbRow);
   if (error) {
     console.error('Error syncing addExpense:', error);
+    checkAuthError(error);
     showToast('Error de conexión: No se pudo guardar el gasto en la nube.', 'error');
     throw error;
   }
@@ -497,6 +509,7 @@ export async function updateExpense(year, month, id, updates) {
     const { error } = await supabase.from('expenses').upsert(dbRow);
     if (error) {
       console.error('Error syncing updateExpense:', error);
+      checkAuthError(error);
       showToast('Error de conexión: No se pudo actualizar en la nube.', 'error');
       throw error;
     }
@@ -531,6 +544,7 @@ export async function deleteExpense(year, month, id) {
   const { error } = await supabase.from('expenses').delete().eq('id', id);
   if (error) {
     console.error('Error syncing deleteExpense:', error);
+    checkAuthError(error);
     showToast('Error de conexión: No se pudo eliminar en la nube.', 'error');
     throw error;
   }
@@ -613,6 +627,7 @@ async function syncCommissionExpense(income) {
         const { error } = await supabase.from('expenses').upsert(dbRow);
         if (error) {
           console.error('Error syncing updated commission expense:', error);
+          checkAuthError(error);
           showToast('Error al actualizar comisión en la nube.', 'error');
           throw error;
         }
@@ -646,6 +661,7 @@ async function syncCommissionExpense(income) {
         const { error } = await supabase.from('expenses').insert(dbRow);
         if (error) {
           console.error('Error syncing new commission expense:', error);
+          checkAuthError(error);
           showToast('Error al guardar comisión en la nube.', 'error');
           throw error;
         }
@@ -664,6 +680,7 @@ async function syncCommissionExpense(income) {
         const { error } = await supabase.from('expenses').delete().eq('id', foundExpense.id);
         if (error) {
           console.error('Error syncing deleted commission expense:', error);
+          checkAuthError(error);
           showToast('Error al eliminar comisión en la nube.', 'error');
           throw error;
         }
@@ -699,6 +716,7 @@ export async function addIncome(year, month, income) {
   const { error } = await supabase.from('incomes').insert(dbRow);
   if (error) {
     console.error('Error syncing addIncome:', error);
+    checkAuthError(error);
     showToast('Error de conexión: No se pudo guardar el ingreso en la nube.', 'error');
     throw error;
   }
@@ -748,6 +766,7 @@ export async function updateIncome(year, month, id, updates) {
     const { error } = await supabase.from('incomes').upsert(dbRow);
     if (error) {
       console.error('Error syncing updateIncome:', error);
+      checkAuthError(error);
       showToast('Error de conexión: No se pudo actualizar en la nube.', 'error');
       throw error;
     }
@@ -786,6 +805,7 @@ export async function deleteIncome(year, month, id) {
   const { error } = await supabase.from('incomes').delete().eq('id', id);
   if (error) {
     console.error('Error syncing deleteIncome:', error);
+    checkAuthError(error);
     showToast('Error de conexión: No se pudo eliminar en la nube.', 'error');
     throw error;
   }
@@ -911,6 +931,7 @@ export async function payCommission(incomeId, ratePaid) {
   const { error } = await supabase.from('incomes').upsert(dbRow);
   if (error) {
     console.error('Error syncing payCommission income update:', error);
+    checkAuthError(error);
     showToast('Error de conexión: No se pudo registrar el pago en la nube.', 'error');
     foundIncome.commissionStatus = originalIncome.commissionStatus;
     foundIncome.exchangeRate = oldRate;

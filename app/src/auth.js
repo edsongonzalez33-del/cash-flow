@@ -34,6 +34,12 @@ export function initAuth(onLoginSuccess) {
       showAuthModal();
     }
   });
+
+  // Listen for expired/invalid auth events from store
+  window.addEventListener('auth-expired', () => {
+    showToast('Tu sesión ha expirado. Por favor inicia sesión de nuevo.', 'error');
+    logout();
+  });
 }
 
 export function getCurrentUser() {
