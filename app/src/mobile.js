@@ -105,19 +105,23 @@ async function bootMobile() {
     pendingDelete = null;
   });
 
-  $('#confirm-delete').addEventListener('click', () => {
+  $('#confirm-delete').addEventListener('click', async () => {
     if (pendingDelete) {
       const { type, id, year, month } = pendingDelete;
-      if (type === 'income') {
-        deleteIncome(year, month, id);
-        showToast('Ingreso eliminado', 'info');
-      } else {
-        deleteExpense(year, month, id);
-        showToast('Gasto eliminado', 'info');
+      try {
+        if (type === 'income') {
+          await deleteIncome(year, month, id);
+          showToast('Ingreso eliminado', 'info');
+        } else {
+          await deleteExpense(year, month, id);
+          showToast('Gasto eliminado', 'info');
+        }
+        pendingDelete = null;
+        $('#confirm-overlay').classList.remove('active');
+        window.dispatchEvent(new CustomEvent('data-changed'));
+      } catch (err) {
+        console.error('Error al eliminar:', err);
       }
-      pendingDelete = null;
-      $('#confirm-overlay').classList.remove('active');
-      window.dispatchEvent(new CustomEvent('data-changed'));
     }
   });
 
