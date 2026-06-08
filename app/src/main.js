@@ -288,5 +288,33 @@ function setupThemeToggle() {
   });
 }
 
+// ── Automatic cloud sync on focus/visibility change ──
+let isSyncing = false;
+async function handleForegroundSync() {
+  if (isSyncing) return;
+  isSyncing = true;
+  try {
+    const synced = await syncWithSupabase();
+    if (synced) {
+      showToast('Datos sincronizados con la nube', 'info');
+      renderDashboard();
+      renderExpenses();
+      renderIncomes();
+    }
+  } finally {
+    isSyncing = false;
+  }
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    handleForegroundSync();
+  }
+});
+
+window.addEventListener('focus', () => {
+  handleForegroundSync();
+});
+
 // ── Start ──
 document.addEventListener('DOMContentLoaded', boot);

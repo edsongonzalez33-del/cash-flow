@@ -1,7 +1,7 @@
 // ============================================================
 // Data Store - localStorage persistence & Supabase cloud sync
 // ============================================================
-import { uuid, monthKey, todayISO } from './utils.js';
+import { uuid, monthKey, todayISO, showToast } from './utils.js';
 import { supabase } from './supabase.js';
 
 const STORAGE_KEY = 'flujoDeCaja_data';
@@ -453,8 +453,13 @@ export function addExpense(year, month, expense) {
     if (session) {
       const dbRow = mapExpenseToDB(entry, session.user.id);
       supabase.from('expenses').insert(dbRow).then(({ error }) => {
-        if (error) console.error('Error syncing addExpense:', error);
+        if (error) {
+          console.error('Error syncing addExpense:', error);
+          showToast('Error de conexión: Gasto guardado solo localmente.', 'error');
+        }
       });
+    } else {
+      showToast('Sesión no activa. Gasto guardado solo localmente.', 'error');
     }
   });
 
@@ -504,8 +509,13 @@ export function updateExpense(year, month, id, updates) {
       if (session) {
         const dbRow = mapExpenseToDB(updated, session.user.id);
         supabase.from('expenses').upsert(dbRow).then(({ error }) => {
-          if (error) console.error('Error syncing updateExpense:', error);
+          if (error) {
+            console.error('Error syncing updateExpense:', error);
+            showToast('Error de conexión: Modificación guardada solo localmente.', 'error');
+          }
         });
+      } else {
+        showToast('Sesión no activa. Modificación guardada solo localmente.', 'error');
       }
     });
 
@@ -542,8 +552,13 @@ export function deleteExpense(year, month, id) {
   supabase.auth.getSession().then(({ data: { session } }) => {
     if (session) {
       supabase.from('expenses').delete().eq('id', id).then(({ error }) => {
-        if (error) console.error('Error syncing deleteExpense:', error);
+        if (error) {
+          console.error('Error syncing deleteExpense:', error);
+          showToast('Error de conexión: Eliminación guardada solo localmente.', 'error');
+        }
       });
+    } else {
+      showToast('Sesión no activa. Eliminación guardada solo localmente.', 'error');
     }
   });
 }
@@ -617,7 +632,10 @@ function syncCommissionExpense(income) {
         if (session) {
           const dbRow = mapExpenseToDB(updatedExpense, session.user.id);
           supabase.from('expenses').upsert(dbRow).then(({ error }) => {
-            if (error) console.error('Error syncing updated commission expense:', error);
+            if (error) {
+              console.error('Error syncing updated commission expense:', error);
+              showToast('Error al actualizar comisión en la nube.', 'error');
+            }
           });
         }
       });
@@ -639,7 +657,10 @@ function syncCommissionExpense(income) {
         if (session) {
           const dbRow = mapExpenseToDB(newExpense, session.user.id);
           supabase.from('expenses').insert(dbRow).then(({ error }) => {
-            if (error) console.error('Error syncing new commission expense:', error);
+            if (error) {
+              console.error('Error syncing new commission expense:', error);
+              showToast('Error al guardar comisión en la nube.', 'error');
+            }
           });
         }
       });
@@ -657,7 +678,10 @@ function syncCommissionExpense(income) {
       supabase.auth.getSession().then(({ data: { session } }) => {
         if (session) {
           supabase.from('expenses').delete().eq('id', foundExpense.id).then(({ error }) => {
-            if (error) console.error('Error syncing deleted commission expense:', error);
+            if (error) {
+              console.error('Error syncing deleted commission expense:', error);
+              showToast('Error al eliminar comisión en la nube.', 'error');
+            }
           });
         }
       });
@@ -688,8 +712,13 @@ export function addIncome(year, month, income) {
     if (session) {
       const dbRow = mapIncomeToDB(entry, session.user.id);
       supabase.from('incomes').insert(dbRow).then(({ error }) => {
-        if (error) console.error('Error syncing addIncome:', error);
+        if (error) {
+          console.error('Error syncing addIncome:', error);
+          showToast('Error de conexión: Ingreso guardado solo localmente.', 'error');
+        }
       });
+    } else {
+      showToast('Sesión no activa. Ingreso guardado solo localmente.', 'error');
     }
   });
 
@@ -742,8 +771,13 @@ export function updateIncome(year, month, id, updates) {
       if (session) {
         const dbRow = mapIncomeToDB(updated, session.user.id);
         supabase.from('incomes').upsert(dbRow).then(({ error }) => {
-          if (error) console.error('Error syncing updateIncome:', error);
+          if (error) {
+            console.error('Error syncing updateIncome:', error);
+            showToast('Error de conexión: Modificación guardada solo localmente.', 'error');
+          }
         });
+      } else {
+        showToast('Sesión no activa. Modificación guardada solo localmente.', 'error');
       }
     });
 
@@ -787,8 +821,13 @@ export function deleteIncome(year, month, id) {
   supabase.auth.getSession().then(({ data: { session } }) => {
     if (session) {
       supabase.from('incomes').delete().eq('id', id).then(({ error }) => {
-        if (error) console.error('Error syncing deleteIncome:', error);
+        if (error) {
+          console.error('Error syncing deleteIncome:', error);
+          showToast('Error de conexión: Eliminación guardada solo localmente.', 'error');
+        }
       });
+    } else {
+      showToast('Sesión no activa. Eliminación guardada solo localmente.', 'error');
     }
   });
 }
@@ -880,8 +919,13 @@ export function payCommission(incomeId, ratePaid) {
     if (session) {
       const dbRow = mapIncomeToDB(foundIncome, session.user.id);
       supabase.from('incomes').upsert(dbRow).then(({ error }) => {
-        if (error) console.error('Error syncing payCommission income update:', error);
+        if (error) {
+          console.error('Error syncing payCommission income update:', error);
+          showToast('Error de conexión: Pago de comisión guardado solo localmente.', 'error');
+        }
       });
+    } else {
+      showToast('Sesión no activa. Pago de comisión guardado solo localmente.', 'error');
     }
   });
 

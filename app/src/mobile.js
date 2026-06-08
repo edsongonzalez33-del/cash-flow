@@ -705,6 +705,32 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
+// ── Automatic cloud sync on focus/visibility change (Mobile) ──
+let isSyncingMobile = false;
+async function handleMobileForegroundSync() {
+  if (isSyncingMobile) return;
+  isSyncingMobile = true;
+  try {
+    const synced = await syncWithSupabase();
+    if (synced) {
+      showToast('Datos sincronizados con la nube', 'info');
+      renderMobileApp();
+    }
+  } finally {
+    isSyncingMobile = false;
+  }
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    handleMobileForegroundSync();
+  }
+});
+
+window.addEventListener('focus', () => {
+  handleMobileForegroundSync();
+});
+
 // ── Start ──
 document.addEventListener('DOMContentLoaded', () => {
   bootMobile();
