@@ -316,5 +316,9 @@ window.addEventListener('focus', () => {
   handleForegroundSync();
 });
 
+window.addEventListener('online', () => {
+  handleForegroundSync();
+});
+
 // ── Start ──
 document.addEventListener('DOMContentLoaded', boot);

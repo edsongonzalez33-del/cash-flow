@@ -629,73 +629,77 @@ async function handleFormSubmit(e) {
   const [y, m] = dateValue.split('-').map(Number);
   const isEdit = !!currentEditId;
 
-  if (type === 'income') {
-    const commActive = $('#field-commission-active').checked;
-    const commRecipient = $('#field-commission-recipient').value;
-    
-    if (commActive && !commRecipient) {
-      showToast('Por favor selecciona un beneficiario', 'error');
-      return;
-    }
-
-    const data = {
-      date: dateValue,
-      company: conceptValue,
-      amount: amountValue,
-      exchangeRate: rateValue,
-      amountBs: amountBsValue,
-      notes: notesValue,
-      commissionActive: commActive,
-      commissionRecipient: commActive ? commRecipient : '',
-      commissionStatus: commActive ? $('#field-commission-status').value : 'pendiente',
-      commissionAmount: commActive ? (parseFloat($('#field-commission-amount').value) || 0) : 0,
-      commissionPct: commActive ? (parseFloat($('#field-commission-pct').value) || 0) : 0
-    };
-
-    if (isEdit) {
-      const oldKey = monthKey(currentYear, currentMonth);
-      const newKey = monthKey(y, m);
-      if (oldKey !== newKey) {
-        deleteIncome(currentYear, currentMonth, currentEditId);
-        addIncome(y, m, data);
-      } else {
-        updateIncome(currentYear, currentMonth, currentEditId, data);
+  try {
+    if (type === 'income') {
+      const commActive = $('#field-commission-active').checked;
+      const commRecipient = $('#field-commission-recipient').value;
+      
+      if (commActive && !commRecipient) {
+        showToast('Por favor selecciona un beneficiario', 'error');
+        return;
       }
-      showToast('Ingreso actualizado', 'success');
-    } else {
-      addIncome(y, m, data);
-      showToast('Ingreso registrado', 'success');
-    }
-  } else {
-    // Expense
-    const data = {
-      date: dateValue,
-      concept: conceptValue,
-      amount: amountValue,
-      exchangeRate: rateValue,
-      amountBs: amountBsValue,
-      notes: notesValue,
-      type: $('#field-expense-type').value
-    };
 
-    if (isEdit) {
-      const oldKey = monthKey(currentYear, currentMonth);
-      const newKey = monthKey(y, m);
-      if (oldKey !== newKey) {
-        deleteExpense(currentYear, currentMonth, currentEditId);
-        addExpense(y, m, data);
+      const data = {
+        date: dateValue,
+        company: conceptValue,
+        amount: amountValue,
+        exchangeRate: rateValue,
+        amountBs: amountBsValue,
+        notes: notesValue,
+        commissionActive: commActive,
+        commissionRecipient: commActive ? commRecipient : '',
+        commissionStatus: commActive ? $('#field-commission-status').value : 'pendiente',
+        commissionAmount: commActive ? (parseFloat($('#field-commission-amount').value) || 0) : 0,
+        commissionPct: commActive ? (parseFloat($('#field-commission-pct').value) || 0) : 0
+      };
+
+      if (isEdit) {
+        const oldKey = monthKey(currentYear, currentMonth);
+        const newKey = monthKey(y, m);
+        if (oldKey !== newKey) {
+          await deleteIncome(currentYear, currentMonth, currentEditId);
+          await addIncome(y, m, data);
+        } else {
+          await updateIncome(currentYear, currentMonth, currentEditId, data);
+        }
+        showToast('Ingreso actualizado', 'success');
       } else {
-        updateExpense(currentYear, currentMonth, currentEditId, data);
+        await addIncome(y, m, data);
+        showToast('Ingreso registrado', 'success');
       }
-      showToast('Gasto actualizado', 'success');
     } else {
-      addExpense(y, m, data);
-      showToast('Gasto registrado', 'success');
+      // Expense
+      const data = {
+        date: dateValue,
+        concept: conceptValue,
+        amount: amountValue,
+        exchangeRate: rateValue,
+        amountBs: amountBsValue,
+        notes: notesValue,
+        type: $('#field-expense-type').value
+      };
+
+      if (isEdit) {
+        const oldKey = monthKey(currentYear, currentMonth);
+        const newKey = monthKey(y, m);
+        if (oldKey !== newKey) {
+          await deleteExpense(currentYear, currentMonth, currentEditId);
+          await addExpense(y, m, data);
+        } else {
+          await updateExpense(currentYear, currentMonth, currentEditId, data);
+        }
+        showToast('Gasto actualizado', 'success');
+      } else {
+        await addExpense(y, m, data);
+        showToast('Gasto registrado', 'success');
+      }
     }
+
+    closeFormModal();
+    window.dispatchEvent(new CustomEvent('data-changed'));
+  } catch (err) {
+    console.error(err);
   }
-
-  closeFormModal();
-  window.dispatchEvent(new CustomEvent('data-changed'));
 }
 
 function escapeHtml(str) {
@@ -728,6 +732,10 @@ document.addEventListener('visibilitychange', () => {
 });
 
 window.addEventListener('focus', () => {
+  handleMobileForegroundSync();
+});
+
+window.addEventListener('online', () => {
   handleMobileForegroundSync();
 });
 

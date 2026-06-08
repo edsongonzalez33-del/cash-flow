@@ -349,7 +349,7 @@ function openIncomeModal(income = null) {
 
   // Form submit handler
   const form = $('#modal-form');
-  const handler = (e) => {
+  const handler = async (e) => {
     e.preventDefault();
     const data = {
       date: $('#field-date').value,
@@ -379,25 +379,29 @@ function openIncomeModal(income = null) {
 
     const [y, m] = data.date.split('-').map(Number);
 
-    if (isEdit) {
-      const oldKey = monthKey(currentYear, currentMonth);
-      const newKey = monthKey(y, m);
-      if (oldKey !== newKey) {
-        deleteIncome(currentYear, currentMonth, income.id);
-        addIncome(y, m, data);
+    try {
+      if (isEdit) {
+        const oldKey = monthKey(currentYear, currentMonth);
+        const newKey = monthKey(y, m);
+        if (oldKey !== newKey) {
+          await deleteIncome(currentYear, currentMonth, income.id);
+          await addIncome(y, m, data);
+        } else {
+          await updateIncome(currentYear, currentMonth, income.id, data);
+        }
+        showToast('Ingreso actualizado');
       } else {
-        updateIncome(currentYear, currentMonth, income.id, data);
+        await addIncome(y, m, data);
+        showToast('Ingreso agregado');
       }
-      showToast('Ingreso actualizado');
-    } else {
-      addIncome(y, m, data);
-      showToast('Ingreso agregado');
-    }
 
-    overlay.classList.remove('active');
-    form.removeEventListener('submit', handler);
-    renderIncomes();
-    window.dispatchEvent(new CustomEvent('data-changed'));
+      overlay.classList.remove('active');
+      form.removeEventListener('submit', handler);
+      renderIncomes();
+      window.dispatchEvent(new CustomEvent('data-changed'));
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   form.addEventListener('submit', handler);
@@ -410,11 +414,15 @@ function openIncomeModal(income = null) {
 /**
  * Handle confirmed delete for incomes
  */
-export function handleIncomeDelete(id, year, month) {
-  deleteIncome(year, month, id);
-  showToast('Ingreso eliminado');
-  renderIncomes();
-  window.dispatchEvent(new CustomEvent('data-changed'));
+export async function handleIncomeDelete(id, year, month) {
+  try {
+    await deleteIncome(year, month, id);
+    showToast('Ingreso eliminado');
+    renderIncomes();
+    window.dispatchEvent(new CustomEvent('data-changed'));
+  } catch (err) {
+    console.error(err);
+  }
 }
 
 function escapeHtml(str) {

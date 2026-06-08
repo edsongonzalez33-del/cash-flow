@@ -439,34 +439,39 @@ export function getExpenses(year, month) {
   return items.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
 }
 
-export function addExpense(year, month, expense) {
+export async function addExpense(year, month, expense) {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
+    showToast('Sesión no activa. Inicia sesión para guardar.', 'error');
+    throw new Error('Sesión no activa');
+  }
+
+  const entry = { id: uuid(), ...expense };
+  const dbRow = mapExpenseToDB(entry, session.user.id);
+  const { error } = await supabase.from('expenses').insert(dbRow);
+  if (error) {
+    console.error('Error syncing addExpense:', error);
+    showToast('Error de conexión: No se pudo guardar el gasto en la nube.', 'error');
+    throw error;
+  }
+
   const store = getStore();
   const [y, m] = expense.date.split('-').map(Number);
   const key = monthKey(y, m);
   if (!store.expenses[key]) store.expenses[key] = [];
-  const entry = { id: uuid(), ...expense };
   store.expenses[key].push(entry);
   saveStore(store);
-
-  // Sync to Supabase in background
-  supabase.auth.getSession().then(({ data: { session } }) => {
-    if (session) {
-      const dbRow = mapExpenseToDB(entry, session.user.id);
-      supabase.from('expenses').insert(dbRow).then(({ error }) => {
-        if (error) {
-          console.error('Error syncing addExpense:', error);
-          showToast('Error de conexión: Gasto guardado solo localmente.', 'error');
-        }
-      });
-    } else {
-      showToast('Sesión no activa. Gasto guardado solo localmente.', 'error');
-    }
-  });
 
   return entry;
 }
 
-export function updateExpense(year, month, id, updates) {
+export async function updateExpense(year, month, id, updates) {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
+    showToast('Sesión no activa. Inicia sesión para guardar.', 'error');
+    throw new Error('Sesión no activa');
+  }
+
   const store = getStore();
   let key = monthKey(year, month);
   let list = store.expenses[key] || [];
@@ -488,6 +493,14 @@ export function updateExpense(year, month, id, updates) {
     const original = list[idx];
     const updated = { ...original, ...updates };
 
+    const dbRow = mapExpenseToDB(updated, session.user.id);
+    const { error } = await supabase.from('expenses').upsert(dbRow);
+    if (error) {
+      console.error('Error syncing updateExpense:', error);
+      showToast('Error de conexión: No se pudo actualizar en la nube.', 'error');
+      throw error;
+    }
+
     const [origY, origM] = original.date.split('-').map(Number);
     const [updY, updM] = updated.date.split('-').map(Number);
 
@@ -503,28 +516,25 @@ export function updateExpense(year, month, id, updates) {
     }
 
     saveStore(store);
-
-    // Sync to Supabase in background
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        const dbRow = mapExpenseToDB(updated, session.user.id);
-        supabase.from('expenses').upsert(dbRow).then(({ error }) => {
-          if (error) {
-            console.error('Error syncing updateExpense:', error);
-            showToast('Error de conexión: Modificación guardada solo localmente.', 'error');
-          }
-        });
-      } else {
-        showToast('Sesión no activa. Modificación guardada solo localmente.', 'error');
-      }
-    });
-
     return updated;
   }
   return null;
 }
 
-export function deleteExpense(year, month, id) {
+export async function deleteExpense(year, month, id) {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
+    showToast('Sesión no activa. Inicia sesión para borrar.', 'error');
+    throw new Error('Sesión no activa');
+  }
+
+  const { error } = await supabase.from('expenses').delete().eq('id', id);
+  if (error) {
+    console.error('Error syncing deleteExpense:', error);
+    showToast('Error de conexión: No se pudo eliminar en la nube.', 'error');
+    throw error;
+  }
+
   const store = getStore();
   let key = monthKey(year, month);
   let list = store.expenses[key] || [];
@@ -547,26 +557,12 @@ export function deleteExpense(year, month, id) {
     if (list.length === 0) delete store.expenses[key];
     saveStore(store);
   }
-
-  // Sync to Supabase in background
-  supabase.auth.getSession().then(({ data: { session } }) => {
-    if (session) {
-      supabase.from('expenses').delete().eq('id', id).then(({ error }) => {
-        if (error) {
-          console.error('Error syncing deleteExpense:', error);
-          showToast('Error de conexión: Eliminación guardada solo localmente.', 'error');
-        }
-      });
-    } else {
-      showToast('Sesión no activa. Eliminación guardada solo localmente.', 'error');
-    }
-  });
 }
 
 /**
  * Sincroniza el gasto de comisión asociado a un ingreso en localStorage y Supabase
  */
-function syncCommissionExpense(income) {
+async function syncCommissionExpense(income) {
   const store = getStore();
   const incomeId = income.id;
   const tag = `[ID-Ingreso: ${incomeId}]`;
@@ -587,6 +583,8 @@ function syncCommissionExpense(income) {
   }
 
   const isCommissionPaid = income.commissionActive && income.commissionStatus === 'pagado' && (income.commissionAmount || 0) > 0;
+
+  const { data: { session } } = await supabase.auth.getSession();
 
   if (isCommissionPaid) {
     const recipient = income.commissionRecipient || 'Tercero';
@@ -610,6 +608,16 @@ function syncCommissionExpense(income) {
       // Actualizar el gasto existente
       const updatedExpense = { ...foundExpense, ...expenseData };
       
+      if (session) {
+        const dbRow = mapExpenseToDB(updatedExpense, session.user.id);
+        const { error } = await supabase.from('expenses').upsert(dbRow);
+        if (error) {
+          console.error('Error syncing updated commission expense:', error);
+          showToast('Error al actualizar comisión en la nube.', 'error');
+          throw error;
+        }
+      }
+
       if (foundMonthKey !== targetMonthKey) {
         // Mover de mes
         store.expenses[foundMonthKey].splice(foundIdx, 1);
@@ -626,19 +634,6 @@ function syncCommissionExpense(income) {
       }
       
       saveStore(store);
-
-      // Sincronizar en Supabase
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        if (session) {
-          const dbRow = mapExpenseToDB(updatedExpense, session.user.id);
-          supabase.from('expenses').upsert(dbRow).then(({ error }) => {
-            if (error) {
-              console.error('Error syncing updated commission expense:', error);
-              showToast('Error al actualizar comisión en la nube.', 'error');
-            }
-          });
-        }
-      });
     } else {
       // Crear un nuevo gasto
       const newExpense = {
@@ -646,45 +641,39 @@ function syncCommissionExpense(income) {
         ...expenseData
       };
       
+      if (session) {
+        const dbRow = mapExpenseToDB(newExpense, session.user.id);
+        const { error } = await supabase.from('expenses').insert(dbRow);
+        if (error) {
+          console.error('Error syncing new commission expense:', error);
+          showToast('Error al guardar comisión en la nube.', 'error');
+          throw error;
+        }
+      }
+
       if (!store.expenses[targetMonthKey]) {
         store.expenses[targetMonthKey] = [];
       }
       store.expenses[targetMonthKey].push(newExpense);
       saveStore(store);
-
-      // Sincronizar en Supabase
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        if (session) {
-          const dbRow = mapExpenseToDB(newExpense, session.user.id);
-          supabase.from('expenses').insert(dbRow).then(({ error }) => {
-            if (error) {
-              console.error('Error syncing new commission expense:', error);
-              showToast('Error al guardar comisión en la nube.', 'error');
-            }
-          });
-        }
-      });
     }
   } else {
     // Si no está pagada o no está activa, pero existía un gasto previo, lo eliminamos
     if (foundExpense) {
+      if (session) {
+        const { error } = await supabase.from('expenses').delete().eq('id', foundExpense.id);
+        if (error) {
+          console.error('Error syncing deleted commission expense:', error);
+          showToast('Error al eliminar comisión en la nube.', 'error');
+          throw error;
+        }
+      }
+
       store.expenses[foundMonthKey].splice(foundIdx, 1);
       if (store.expenses[foundMonthKey].length === 0) {
         delete store.expenses[foundMonthKey];
       }
       saveStore(store);
-
-      // Sincronizar eliminación en Supabase
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        if (session) {
-          supabase.from('expenses').delete().eq('id', foundExpense.id).then(({ error }) => {
-            if (error) {
-              console.error('Error syncing deleted commission expense:', error);
-              showToast('Error al eliminar comisión en la nube.', 'error');
-            }
-          });
-        }
-      });
     }
   }
 }
@@ -698,37 +687,42 @@ export function getIncomes(year, month) {
   return items.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
 }
 
-export function addIncome(year, month, income) {
+export async function addIncome(year, month, income) {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
+    showToast('Sesión no activa. Inicia sesión para guardar.', 'error');
+    throw new Error('Sesión no activa');
+  }
+
+  const entry = { id: uuid(), ...income };
+  const dbRow = mapIncomeToDB(entry, session.user.id);
+  const { error } = await supabase.from('incomes').insert(dbRow);
+  if (error) {
+    console.error('Error syncing addIncome:', error);
+    showToast('Error de conexión: No se pudo guardar el ingreso en la nube.', 'error');
+    throw error;
+  }
+
   const store = getStore();
   const [y, m] = income.date.split('-').map(Number);
   const key = monthKey(y, m);
   if (!store.incomes[key]) store.incomes[key] = [];
-  const entry = { id: uuid(), ...income };
   store.incomes[key].push(entry);
   saveStore(store);
 
-  // Sync to Supabase in background
-  supabase.auth.getSession().then(({ data: { session } }) => {
-    if (session) {
-      const dbRow = mapIncomeToDB(entry, session.user.id);
-      supabase.from('incomes').insert(dbRow).then(({ error }) => {
-        if (error) {
-          console.error('Error syncing addIncome:', error);
-          showToast('Error de conexión: Ingreso guardado solo localmente.', 'error');
-        }
-      });
-    } else {
-      showToast('Sesión no activa. Ingreso guardado solo localmente.', 'error');
-    }
-  });
-
   // Sincronizar el gasto de comisión correspondiente si aplica
-  syncCommissionExpense(entry);
+  await syncCommissionExpense(entry);
 
   return entry;
 }
 
-export function updateIncome(year, month, id, updates) {
+export async function updateIncome(year, month, id, updates) {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
+    showToast('Sesión no activa. Inicia sesión para guardar.', 'error');
+    throw new Error('Sesión no activa');
+  }
+
   const store = getStore();
   let key = monthKey(year, month);
   let list = store.incomes[key] || [];
@@ -750,6 +744,14 @@ export function updateIncome(year, month, id, updates) {
     const original = list[idx];
     const updated = { ...original, ...updates };
 
+    const dbRow = mapIncomeToDB(updated, session.user.id);
+    const { error } = await supabase.from('incomes').upsert(dbRow);
+    if (error) {
+      console.error('Error syncing updateIncome:', error);
+      showToast('Error de conexión: No se pudo actualizar en la nube.', 'error');
+      throw error;
+    }
+
     const [origY, origM] = original.date.split('-').map(Number);
     const [updY, updM] = updated.date.split('-').map(Number);
 
@@ -766,30 +768,28 @@ export function updateIncome(year, month, id, updates) {
 
     saveStore(store);
 
-    // Sync to Supabase in background
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        const dbRow = mapIncomeToDB(updated, session.user.id);
-        supabase.from('incomes').upsert(dbRow).then(({ error }) => {
-          if (error) {
-            console.error('Error syncing updateIncome:', error);
-            showToast('Error de conexión: Modificación guardada solo localmente.', 'error');
-          }
-        });
-      } else {
-        showToast('Sesión no activa. Modificación guardada solo localmente.', 'error');
-      }
-    });
-
     // Sincronizar el gasto de comisión correspondiente si aplica
-    syncCommissionExpense(updated);
+    await syncCommissionExpense(updated);
 
     return updated;
   }
   return null;
 }
 
-export function deleteIncome(year, month, id) {
+export async function deleteIncome(year, month, id) {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
+    showToast('Sesión no activa. Inicia sesión para borrar.', 'error');
+    throw new Error('Sesión no activa');
+  }
+
+  const { error } = await supabase.from('incomes').delete().eq('id', id);
+  if (error) {
+    console.error('Error syncing deleteIncome:', error);
+    showToast('Error de conexión: No se pudo eliminar en la nube.', 'error');
+    throw error;
+  }
+
   const store = getStore();
   let key = monthKey(year, month);
   let list = store.incomes[key] || [];
@@ -814,22 +814,8 @@ export function deleteIncome(year, month, id) {
     saveStore(store);
     
     // Forzar la eliminación de cualquier gasto de comisión asociado
-    syncCommissionExpense({ ...income, commissionActive: false });
+    await syncCommissionExpense({ ...income, commissionActive: false });
   }
-
-  // Sync to Supabase in background
-  supabase.auth.getSession().then(({ data: { session } }) => {
-    if (session) {
-      supabase.from('incomes').delete().eq('id', id).then(({ error }) => {
-        if (error) {
-          console.error('Error syncing deleteIncome:', error);
-          showToast('Error de conexión: Eliminación guardada solo localmente.', 'error');
-        }
-      });
-    } else {
-      showToast('Sesión no activa. Eliminación guardada solo localmente.', 'error');
-    }
-  });
 }
 
 // ── COMMISSIONS ──
@@ -888,7 +874,13 @@ export function getPaidCommissions() {
   };
 }
 
-export function payCommission(incomeId, ratePaid) {
+export async function payCommission(incomeId, ratePaid) {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
+    showToast('Sesión no activa. Inicia sesión para pagar.', 'error');
+    throw new Error('Sesión no activa');
+  }
+
   const store = getStore();
   let foundIncome = null;
   let foundMonthKey = null;
@@ -906,31 +898,34 @@ export function payCommission(incomeId, ratePaid) {
     throw new Error('Ingreso no encontrado');
   }
 
+  const originalIncome = { ...foundIncome };
   foundIncome.commissionStatus = 'pagado';
+  const oldRate = foundIncome.exchangeRate;
+  const oldAmountBs = foundIncome.amountBs;
   if (!foundIncome.exchangeRate || foundIncome.exchangeRate === 0) {
     foundIncome.exchangeRate = parseFloat(ratePaid) || 0;
     foundIncome.amountBs = foundIncome.amount * foundIncome.exchangeRate;
   }
+
+  const dbRow = mapIncomeToDB(foundIncome, session.user.id);
+  const { error } = await supabase.from('incomes').upsert(dbRow);
+  if (error) {
+    console.error('Error syncing payCommission income update:', error);
+    showToast('Error de conexión: No se pudo registrar el pago en la nube.', 'error');
+    foundIncome.commissionStatus = originalIncome.commissionStatus;
+    foundIncome.exchangeRate = oldRate;
+    foundIncome.amountBs = oldAmountBs;
+    throw error;
+  }
   
   saveStore(store);
 
-  // Sync income update to Supabase in background
-  supabase.auth.getSession().then(({ data: { session } }) => {
-    if (session) {
-      const dbRow = mapIncomeToDB(foundIncome, session.user.id);
-      supabase.from('incomes').upsert(dbRow).then(({ error }) => {
-        if (error) {
-          console.error('Error syncing payCommission income update:', error);
-          showToast('Error de conexión: Pago de comisión guardado solo localmente.', 'error');
-        }
-      });
-    } else {
-      showToast('Sesión no activa. Pago de comisión guardado solo localmente.', 'error');
-    }
-  });
-
   // Sincronizar el gasto de comisión utilizando la nueva función enlazada
-  syncCommissionExpense(foundIncome);
+  try {
+    await syncCommissionExpense(foundIncome);
+  } catch (commErr) {
+    console.error(commErr);
+  }
   
   return foundIncome;
 }
