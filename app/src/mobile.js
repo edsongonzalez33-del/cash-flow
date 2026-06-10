@@ -5,7 +5,8 @@ import { initAuth, logout } from './auth.js';
 import {
   getIncomes, addIncome, updateIncome, deleteIncome,
   getExpenses, addExpense, updateExpense, deleteExpense,
-  getMonthTotals, syncWithSupabase, getPendingCommissions
+  getMonthTotals, syncWithSupabase, getPendingCommissions,
+  getAllCompanies, getAllConcepts
 } from './store.js';
 import {
   formatCurrency, formatDate, formatMonthLabel, navigateMonth,
@@ -457,6 +458,23 @@ function openFormModal(type, record = null) {
   // Configure Form Input
   $('#field-type').value = type;
 
+  // Add dynamic datalists for autocomplete
+  let dlCompany = $('#company-suggestions');
+  if (!dlCompany) {
+    dlCompany = document.createElement('datalist');
+    dlCompany.id = 'company-suggestions';
+    document.body.appendChild(dlCompany);
+  }
+  dlCompany.innerHTML = getAllCompanies().map(c => `<option value="${escapeHtml(c)}"></option>`).join('');
+
+  let dlExpense = $('#expense-suggestions');
+  if (!dlExpense) {
+    dlExpense = document.createElement('datalist');
+    dlExpense.id = 'expense-suggestions';
+    document.body.appendChild(dlExpense);
+  }
+  dlExpense.innerHTML = getAllConcepts().map(c => `<option value="${escapeHtml(c)}"></option>`).join('');
+
   // Set standard values
   $('#field-date').value = isEdit ? record.date : todayISO();
   $('#field-amount').value = isEdit ? record.amount : '';
@@ -469,6 +487,7 @@ function openFormModal(type, record = null) {
     $('#label-concept').textContent = 'Compañía / Origen';
     $('#field-concept').placeholder = 'Ej: Oceánica, Mercantil, Particular...';
     $('#field-concept').value = isEdit ? record.company || '' : '';
+    $('#field-concept').setAttribute('list', 'company-suggestions');
     
     // Show/Hide Panels
     $('#group-expense-type').style.display = 'none';
@@ -488,6 +507,7 @@ function openFormModal(type, record = null) {
     $('#label-concept').textContent = 'Concepto del Gasto';
     $('#field-concept').placeholder = 'Ej: Pago internet, Repuestos, Almuerzo...';
     $('#field-concept').value = isEdit ? record.concept || '' : '';
+    $('#field-concept').setAttribute('list', 'expense-suggestions');
 
     // Show/Hide Panels
     $('#group-expense-type').style.display = 'block';
@@ -748,4 +768,36 @@ document.addEventListener('DOMContentLoaded', () => {
   bootMobile();
   // Bind form submit listener to initial modal form
   $('#modal-form').addEventListener('submit', handleFormSubmit);
+
+  // Prevent app exit on back navigation
+  history.pushState({ noBack: true }, '');
+});
+
+window.addEventListener('popstate', (e) => {
+  // Prevent going back by pushing state again
+  history.pushState({ noBack: true }, '');
+  
+  // Close any open modals if back button is pressed
+  const modalOverlay = $('#modal-overlay');
+  const configOverlay = $('#config-overlay');
+  const confirmOverlay = $('#confirm-overlay');
+  
+  let modalClosed = false;
+  if (modalOverlay && modalOverlay.classList.contains('active')) {
+    closeFormModal();
+    modalClosed = true;
+  }
+  if (configOverlay && configOverlay.classList.contains('active')) {
+    closeConfigModal();
+    modalClosed = true;
+  }
+  if (confirmOverlay && confirmOverlay.classList.contains('active')) {
+    confirmOverlay.classList.remove('active');
+    pendingDelete = null;
+    modalClosed = true;
+  }
+  
+  if (!modalClosed) {
+    showToast('Usa los botones de la App para navegar', 'info');
+  }
 });
