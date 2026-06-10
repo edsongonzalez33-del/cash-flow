@@ -1,4 +1,4 @@
-const CACHE_NAME = 'flujo-de-caja-v4';
+const CACHE_NAME = 'flujo-de-caja-v5';
 const PRECACHE_ASSETS = [
   '/cash-flow/',
   '/cash-flow/index.html',
