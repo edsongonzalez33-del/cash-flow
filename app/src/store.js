@@ -489,12 +489,17 @@ export async function addExpense(year, month, expense) {
 
   const entry = { id: uuid(), ...expense };
   const dbRow = mapExpenseToDB(entry, session.user.id);
-  const { error } = await supabase.from('expenses').insert(dbRow);
+  const { data, error } = await supabase.from('expenses').insert(dbRow).select();
   if (error) {
     console.error('Error syncing addExpense:', error);
     checkAuthError(error);
     showToast('Error de conexión: No se pudo guardar el gasto en la nube.', 'error');
     throw error;
+  }
+  if (!data || data.length === 0) {
+    console.error('Insert succeeded but select returned empty. RLS issue?');
+    showToast('El registro fue bloqueado por permisos de la base de datos.', 'error');
+    throw new Error('RLS block');
   }
 
   const store = getStore();
@@ -536,12 +541,16 @@ export async function updateExpense(year, month, id, updates) {
     const updated = { ...original, ...updates };
 
     const dbRow = mapExpenseToDB(updated, session.user.id);
-    const { error } = await supabase.from('expenses').upsert(dbRow);
+    const { data, error } = await supabase.from('expenses').upsert(dbRow).select();
     if (error) {
       console.error('Error syncing updateExpense:', error);
       checkAuthError(error);
       showToast('Error de conexión: No se pudo actualizar en la nube.', 'error');
       throw error;
+    }
+    if (!data || data.length === 0) {
+      showToast('El registro fue bloqueado por permisos.', 'error');
+      throw new Error('RLS block');
     }
 
     const [origY, origM] = original.date.split('-').map(Number);
@@ -743,12 +752,17 @@ export async function addIncome(year, month, income) {
 
   const entry = { id: uuid(), ...income };
   const dbRow = mapIncomeToDB(entry, session.user.id);
-  const { error } = await supabase.from('incomes').insert(dbRow);
+  const { data, error } = await supabase.from('incomes').insert(dbRow).select();
   if (error) {
     console.error('Error syncing addIncome:', error);
     checkAuthError(error);
     showToast('Error de conexión: No se pudo guardar el ingreso en la nube.', 'error');
     throw error;
+  }
+  if (!data || data.length === 0) {
+    console.error('Insert succeeded but select returned empty. RLS issue?');
+    showToast('El registro fue bloqueado por permisos de la base de datos.', 'error');
+    throw new Error('RLS block');
   }
 
   const store = getStore();
@@ -793,12 +807,16 @@ export async function updateIncome(year, month, id, updates) {
     const updated = { ...original, ...updates };
 
     const dbRow = mapIncomeToDB(updated, session.user.id);
-    const { error } = await supabase.from('incomes').upsert(dbRow);
+    const { data, error } = await supabase.from('incomes').upsert(dbRow).select();
     if (error) {
       console.error('Error syncing updateIncome:', error);
       checkAuthError(error);
       showToast('Error de conexión: No se pudo actualizar en la nube.', 'error');
       throw error;
+    }
+    if (!data || data.length === 0) {
+      showToast('El registro fue bloqueado por permisos.', 'error');
+      throw new Error('RLS block');
     }
 
     const [origY, origM] = original.date.split('-').map(Number);
