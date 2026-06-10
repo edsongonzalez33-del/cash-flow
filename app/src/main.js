@@ -1,7 +1,7 @@
 // ============================================================
 // Main Entry Point - App initialization and routing
 // ============================================================
-import { importData, exportData, hasData, syncWithSupabase, uploadLocalDataToSupabase } from './store.js';
+import { importData, exportData, hasData, syncWithSupabase, uploadLocalDataToSupabase, setupRealtimeSync } from './store.js';
 import { initDashboard, renderDashboard, setDashboardMonth } from './dashboard.js';
 import { initExpenses, renderExpenses, setExpensesMonth, handleExpenseDelete } from './expenses.js';
 import { initIncomes, renderIncomes, setIncomesMonth, handleIncomeDelete } from './incomes.js';
@@ -62,6 +62,9 @@ async function boot() {
     if (synced) {
       showToast('Datos descargados de la nube', 'success');
     }
+    
+    // Setup Realtime Synchronization
+    setupRealtimeSync();
     
     // Initial render after syncing
     renderDashboard();

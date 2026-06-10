@@ -6,7 +6,7 @@ import {
   getIncomes, addIncome, updateIncome, deleteIncome,
   getExpenses, addExpense, updateExpense, deleteExpense,
   getMonthTotals, syncWithSupabase, getPendingCommissions,
-  getAllCompanies, getAllConcepts
+  getAllCompanies, getAllConcepts, setupRealtimeSync
 } from './store.js';
 import {
   formatCurrency, formatDate, formatMonthLabel, navigateMonth,
@@ -145,6 +145,10 @@ async function bootMobile() {
     if (synced) {
       showToast('Datos actualizados de la nube', 'success');
     }
+
+    // Setup Realtime Synchronization
+    setupRealtimeSync();
+
     renderMobileApp();
   });
 }
@@ -769,35 +773,40 @@ document.addEventListener('DOMContentLoaded', () => {
   // Bind form submit listener to initial modal form
   $('#modal-form').addEventListener('submit', handleFormSubmit);
 
-  // Prevent app exit on back navigation
-  history.pushState({ noBack: true }, '');
+  // Prevent app exit on back navigation using hashchange
+  if (window.location.hash !== '#app') {
+    window.history.replaceState(null, '', window.location.pathname + '#app');
+  }
+  window.history.pushState(null, '', window.location.pathname + '#app');
 });
 
 window.addEventListener('popstate', (e) => {
-  // Prevent going back by pushing state again
-  history.pushState({ noBack: true }, '');
-  
-  // Close any open modals if back button is pressed
-  const modalOverlay = $('#modal-overlay');
-  const configOverlay = $('#config-overlay');
-  const confirmOverlay = $('#confirm-overlay');
-  
-  let modalClosed = false;
-  if (modalOverlay && modalOverlay.classList.contains('active')) {
-    closeFormModal();
-    modalClosed = true;
-  }
-  if (configOverlay && configOverlay.classList.contains('active')) {
-    closeConfigModal();
-    modalClosed = true;
-  }
-  if (confirmOverlay && confirmOverlay.classList.contains('active')) {
-    confirmOverlay.classList.remove('active');
-    pendingDelete = null;
-    modalClosed = true;
-  }
-  
-  if (!modalClosed) {
-    showToast('Usa los botones de la App para navegar', 'info');
+  if (window.location.hash !== '#app') {
+    // Prevent going back by pushing state again
+    window.history.pushState(null, '', window.location.pathname + '#app');
+    
+    // Close any open modals if back button is pressed
+    const modalOverlay = $('#modal-overlay');
+    const configOverlay = $('#config-overlay');
+    const confirmOverlay = $('#confirm-overlay');
+    
+    let modalClosed = false;
+    if (modalOverlay && modalOverlay.classList.contains('active')) {
+      closeFormModal();
+      modalClosed = true;
+    }
+    if (configOverlay && configOverlay.classList.contains('active')) {
+      closeConfigModal();
+      modalClosed = true;
+    }
+    if (confirmOverlay && confirmOverlay.classList.contains('active')) {
+      confirmOverlay.classList.remove('active');
+      pendingDelete = null;
+      modalClosed = true;
+    }
+    
+    if (!modalClosed) {
+      showToast('Usa los botones de la App para navegar', 'info');
+    }
   }
 });

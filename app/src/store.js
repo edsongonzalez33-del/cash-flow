@@ -153,6 +153,36 @@ export async function syncWithSupabase() {
 }
 
 /**
+ * Subscribes to Supabase Realtime to keep devices in sync automatically
+ */
+export function setupRealtimeSync() {
+  supabase.auth.getSession().then(({ data: { session } }) => {
+    if (!session) return;
+    const userId = session.user.id;
+
+    if (window._realtimeChannel) {
+      supabase.removeChannel(window._realtimeChannel);
+    }
+
+    let syncTimeout = null;
+    const triggerSync = () => {
+      if (syncTimeout) clearTimeout(syncTimeout);
+      syncTimeout = setTimeout(async () => {
+        const synced = await syncWithSupabase();
+        if (synced) {
+          window.dispatchEvent(new CustomEvent('data-changed'));
+        }
+      }, 500); // debounce to avoid spam
+    };
+
+    window._realtimeChannel = supabase.channel('schema-db-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses', filter: `user_id=eq.${userId}` }, triggerSync)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'incomes', filter: `user_id=eq.${userId}` }, triggerSync)
+      .subscribe();
+  });
+}
+
+/**
  * Uploads all pre-existing local data to Supabase database (migration helper)
  */
 export async function uploadLocalDataToSupabase() {
