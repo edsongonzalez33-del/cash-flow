@@ -490,6 +490,10 @@ export async function addExpense(year, month, expense) {
   const entry = { id: uuid(), ...expense };
   const dbRow = mapExpenseToDB(entry, session.user.id);
   const { data, error } = await supabase.from('expenses').insert(dbRow).select();
+  
+  // DIAGNOSTIC ALERT
+  alert(`[DEBUG] Supabase Insert Expense:\\nError: ${JSON.stringify(error)}\\nData length: ${data ? data.length : 0}\\nID Sent: ${dbRow.id}\\nDate: ${dbRow.date}`);
+  
   if (error) {
     console.error('Error syncing addExpense:', error);
     checkAuthError(error);
@@ -753,6 +757,10 @@ export async function addIncome(year, month, income) {
   const entry = { id: uuid(), ...income };
   const dbRow = mapIncomeToDB(entry, session.user.id);
   const { data, error } = await supabase.from('incomes').insert(dbRow).select();
+  
+  // DIAGNOSTIC ALERT
+  alert(`[DEBUG] Supabase Insert:\\nError: ${JSON.stringify(error)}\\nData length: ${data ? data.length : 0}\\nID Sent: ${dbRow.id}\\nDate: ${dbRow.date}`);
+  
   if (error) {
     console.error('Error syncing addIncome:', error);
     checkAuthError(error);
