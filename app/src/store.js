@@ -101,28 +101,46 @@ export async function syncWithSupabase() {
 
     const userId = session.user.id;
 
-    // 1. Fetch incomes
-    const { data: dbIncomes, error: incError } = await supabase
-      .from('incomes')
-      .select('*')
-      .eq('user_id', userId);
-
-    if (incError) {
-      console.error('Error syncing incomes:', incError);
-      checkAuthError(incError);
-      return false;
+    // 1. Fetch incomes with pagination to bypass 1000 row limit
+    let dbIncomes = [];
+    let fetchMoreInc = true;
+    let pageInc = 0;
+    while (fetchMoreInc) {
+      const { data, error } = await supabase
+        .from('incomes')
+        .select('*')
+        .eq('user_id', userId)
+        .range(pageInc * 1000, (pageInc + 1) * 1000 - 1);
+        
+      if (error) {
+        console.error('Error syncing incomes:', error);
+        checkAuthError(error);
+        return false;
+      }
+      if (data && data.length > 0) dbIncomes.push(...data);
+      if (!data || data.length < 1000) fetchMoreInc = false;
+      pageInc++;
     }
 
-    // 2. Fetch expenses
-    const { data: dbExpenses, error: expError } = await supabase
-      .from('expenses')
-      .select('*')
-      .eq('user_id', userId);
+    // 2. Fetch expenses with pagination
+    let dbExpenses = [];
+    let fetchMoreExp = true;
+    let pageExp = 0;
+    while (fetchMoreExp) {
+      const { data, error } = await supabase
+        .from('expenses')
+        .select('*')
+        .eq('user_id', userId)
+        .range(pageExp * 1000, (pageExp + 1) * 1000 - 1);
 
-    if (expError) {
-      console.error('Error syncing expenses:', expError);
-      checkAuthError(expError);
-      return false;
+      if (error) {
+        console.error('Error syncing expenses:', error);
+        checkAuthError(error);
+        return false;
+      }
+      if (data && data.length > 0) dbExpenses.push(...data);
+      if (!data || data.length < 1000) fetchMoreExp = false;
+      pageExp++;
     }
 
     // 3. Clear local storage cache and rebuild
