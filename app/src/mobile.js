@@ -518,7 +518,7 @@ function openFormModal(type, record = null) {
     $('#group-commission-toggle').style.display = 'none';
     $('#commission-panel').style.display = 'none';
 
-    $('#field-expense-type').value = isEdit ? record.type || 'variable' : 'variable';
+    $('#field-expense-type').value = isEdit ? record.type || 'fijo' : 'fijo';
   }
 
   // Bind Form dynamic calculations

@@ -202,7 +202,7 @@ function openExpenseModal(expense = null) {
       <div class="form-group">
         <label for="field-type">Tipo</label>
         <select id="field-type">
-          <option value="fijo" ${expense?.type?.toLowerCase() === 'fijo' ? 'selected' : ''}>Fijo</option>
+          <option value="fijo" ${(!expense || expense?.type?.toLowerCase() === 'fijo') ? 'selected' : ''}>Fijo</option>
           <option value="variable" ${expense?.type?.toLowerCase() === 'variable' ? 'selected' : ''}>Variable</option>
         </select>
       </div>
