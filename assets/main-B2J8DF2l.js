@@ -88,7 +88,7 @@ var vo=Object.defineProperty;var ko=(i,t,e)=>t in i?vo(i,t,{enumerable:!0,config
       <div class="form-group">
         <label for="field-type">Tipo</label>
         <select id="field-type">
-          <option value="fijo" ${((b=i==null?void 0:i.type)==null?void 0:b.toLowerCase())==="fijo"?"selected":""}>Fijo</option>
+          <option value="fijo" ${!i||((b=i==null?void 0:i.type)==null?void 0:b.toLowerCase())==="fijo"?"selected":""}>Fijo</option>
           <option value="variable" ${((x=i==null?void 0:i.type)==null?void 0:x.toLowerCase())==="variable"?"selected":""}>Variable</option>
         </select>
       </div>
