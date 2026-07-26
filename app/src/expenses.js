@@ -4,6 +4,7 @@
 import {
   getExpenses, addExpense, updateExpense, deleteExpense, getMonthTotals, getAllConcepts
 } from './store.js';
+import { fetchBcvRate } from './bcvService.js';
 import {
   formatCurrency, formatDate, formatMonthLabel, navigateMonth, showToast, $, todayISO, monthKey
 } from './utils.js';
@@ -238,6 +239,19 @@ function openExpenseModal(expense = null) {
   const rateField = $('#field-exchange-rate');
   const amountBsField = $('#field-amount-bs');
   const notesField = $('#field-notes');
+
+  if (!isEdit) {
+    rateField.placeholder = 'Cargando...';
+    fetchBcvRate().then(bcv => {
+      if (bcv && bcv.tasa) {
+        rateField.value = bcv.tasa;
+        // Trigger manual calculation if amount is already there
+        const ev = new Event('input');
+        rateField.dispatchEvent(ev);
+      }
+      rateField.placeholder = 'Ej: 45.50';
+    });
+  }
 
   const updateCalculationsAndNotes = () => {
     const amount = parseFloat(amountField.value) || 0;

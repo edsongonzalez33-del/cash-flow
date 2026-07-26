@@ -5,6 +5,7 @@ import {
   getIncomes, addIncome, updateIncome, deleteIncome, getMonthTotals,
   getAllCompanies
 } from './store.js';
+import { fetchBcvRate } from './bcvService.js';
 import {
   formatCurrency, formatDate, formatMonthLabel, navigateMonth, showToast, $, todayISO, monthKey
 } from './utils.js';
@@ -273,6 +274,19 @@ function openIncomeModal(income = null) {
   const commLabel = $('#label-commission-calc');
   const amountField = $('#field-amount');
   const notesField = $('#field-notes');
+
+  if (!isEdit) {
+    rateField.placeholder = 'Cargando...';
+    fetchBcvRate().then(bcv => {
+      if (bcv && bcv.tasa) {
+        rateField.value = bcv.tasa;
+        // Trigger manual calculation if amount is already there
+        const ev = new Event('input');
+        rateField.dispatchEvent(ev);
+      }
+      rateField.placeholder = 'Ej: 45.50';
+    });
+  }
 
   activeCheckbox.addEventListener('change', () => {
     panel.style.display = activeCheckbox.checked ? 'block' : 'none';

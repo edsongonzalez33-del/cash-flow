@@ -2,6 +2,7 @@
 // Mobile Module - UI Orchestrator for Mobile App
 // ============================================================
 import { initAuth, logout } from './auth.js';
+import { fetchBcvRate } from './bcvService.js';
 import {
   getIncomes, addIncome, updateIncome, deleteIncome,
   getExpenses, addExpense, updateExpense, deleteExpense,
@@ -485,6 +486,19 @@ function openFormModal(type, record = null) {
   $('#field-exchange-rate').value = isEdit ? record.exchangeRate || '' : '';
   $('#field-amount-bs').value = isEdit ? record.amountBs || '' : '';
   $('#field-notes').value = isEdit ? record.notes || '' : '';
+
+  if (!isEdit) {
+    $('#field-exchange-rate').placeholder = 'Cargando...';
+    fetchBcvRate().then(bcv => {
+      if (bcv && bcv.tasa) {
+        $('#field-exchange-rate').value = bcv.tasa;
+        // Trigger manual calculation if amount is already there
+        const ev = new Event('input');
+        $('#field-exchange-rate').dispatchEvent(ev);
+      }
+      $('#field-exchange-rate').placeholder = 'Ej: 45.50';
+    });
+  }
 
   // Configure custom text label and input fields based on type
   if (type === 'income') {
