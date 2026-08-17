@@ -189,7 +189,7 @@ function openExpenseModal(expense = null) {
 
   const datalistHtml = `
     <datalist id="concept-suggestions">
-      ${Array.from(allConcepts).map(c => `<option value="${escapeHtml(c)}"></option>`).join('')}
+      ${Array.from(allConcepts).map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('')}
     </datalist>
   `;
 

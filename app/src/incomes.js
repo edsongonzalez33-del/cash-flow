@@ -176,7 +176,7 @@ function openIncomeModal(income = null) {
   const allCompanies = getAllCompanies();
   const datalistHtml = `
     <datalist id="company-suggestions">
-      ${allCompanies.map(c => `<option value="${escapeHtml(c)}"></option>`).join('')}
+      ${allCompanies.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('')}
     </datalist>
   `;  $('#modal-body').innerHTML = `
     ${datalistHtml}

@@ -470,7 +470,7 @@ function openFormModal(type, record = null) {
     dlCompany.id = 'company-suggestions';
     document.body.appendChild(dlCompany);
   }
-  dlCompany.innerHTML = getAllCompanies().map(c => `<option value="${escapeHtml(c)}"></option>`).join('');
+  dlCompany.innerHTML = getAllCompanies().map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
 
   let dlExpense = $('#expense-suggestions');
   if (!dlExpense) {
@@ -478,7 +478,7 @@ function openFormModal(type, record = null) {
     dlExpense.id = 'expense-suggestions';
     document.body.appendChild(dlExpense);
   }
-  dlExpense.innerHTML = getAllConcepts().map(c => `<option value="${escapeHtml(c)}"></option>`).join('');
+  dlExpense.innerHTML = getAllConcepts().map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
 
   // Set standard values
   $('#field-date').value = isEdit ? record.date : todayISO();
