@@ -29,7 +29,11 @@ export async function fetchBcvRate() {
     const data = await response.json();
     
     if (Array.isArray(data) && data.length > 0) {
-      return data[0]; // Retorna { id, moneda, tasa, tasa_formateada, ... }
+      const bcvData = data[0];
+      if (bcvData && typeof bcvData.tasa === 'number') {
+        bcvData.tasa = Number(bcvData.tasa.toFixed(2));
+      }
+      return bcvData; // Retorna { id, moneda, tasa, tasa_formateada, ... }
     }
     
     return null;
