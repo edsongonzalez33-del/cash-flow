@@ -79,12 +79,33 @@ async function bootMobile() {
     renderMobileApp();
   });
 
-  // Bind Giant actions
-  $('#btn-add-income').addEventListener('click', () => {
+  // Bind FAB actions
+  const fabToggle = $('#fab-main-toggle');
+  const fabMenu = $('#fab-menu');
+  const fabOverlay = $('#fab-overlay');
+
+  const toggleFabMenu = () => {
+    fabToggle.classList.toggle('active');
+    fabMenu.classList.toggle('active');
+    fabOverlay.classList.toggle('active');
+  };
+
+  const closeFabMenu = () => {
+    fabToggle.classList.remove('active');
+    fabMenu.classList.remove('active');
+    fabOverlay.classList.remove('active');
+  };
+
+  if (fabToggle) fabToggle.addEventListener('click', toggleFabMenu);
+  if (fabOverlay) fabOverlay.addEventListener('click', closeFabMenu);
+
+  $('#fab-btn-income')?.addEventListener('click', () => {
+    closeFabMenu();
     openFormModal('income');
   });
 
-  $('#btn-add-expense').addEventListener('click', () => {
+  $('#fab-btn-expense')?.addEventListener('click', () => {
+    closeFabMenu();
     openFormModal('expense');
   });
 

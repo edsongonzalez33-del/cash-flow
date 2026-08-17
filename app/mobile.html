@@ -66,15 +66,7 @@
     </section>
 
     <!-- ===================== CONTROLES SUPERIORES (MES Y ACCIONES) ===================== -->
-    <section class="top-controls-section">
-      <!-- Botón Ingresos (Izquierda) -->
-      <button class="btn-round-action btn-round-income" id="btn-add-income" aria-label="Registrar Nuevo Ingreso">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4">
-          <line x1="12" y1="5" x2="12" y2="19"></line>
-          <line x1="5" y1="12" x2="19" y2="12"></line>
-        </svg>
-      </button>
-
+    <section class="top-controls-section" style="justify-content: center;">
       <!-- Selector de Mes (Centro) -->
       <div class="month-selector">
         <button class="btn-month-nav" id="mobile-prev-month" aria-label="Mes anterior">
@@ -85,13 +77,6 @@
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
         </button>
       </div>
-
-      <!-- Botón Gastos (Derecha) -->
-      <button class="btn-round-action btn-round-expense" id="btn-add-expense" aria-label="Registrar Nuevo Gasto">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4">
-          <line x1="5" y1="12" x2="19" y2="12"></line>
-        </svg>
-      </button>
     </section>
 
     <!-- ===================== KEY KPIs ===================== -->
@@ -347,6 +332,35 @@
       </div>
     </div>
   </div>
+
+  <!-- ===================== FAB & ACTION MENU ===================== -->
+  <div class="fab-overlay" id="fab-overlay"></div>
+  <div class="fab-menu" id="fab-menu">
+    <button class="fab-action-item" id="fab-btn-income">
+      <span class="fab-action-label">Ingreso</span>
+      <div class="fab-action-icon income-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+          <line x1="12" y1="5" x2="12" y2="19"></line>
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+      </div>
+    </button>
+    <button class="fab-action-item" id="fab-btn-expense">
+      <span class="fab-action-label">Gasto</span>
+      <div class="fab-action-icon expense-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4">
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+      </div>
+    </button>
+  </div>
+  
+  <button class="fab-main" id="fab-main-toggle" aria-label="Opciones de registro">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="fab-icon-plus" id="fab-icon">
+      <line x1="12" y1="5" x2="12" y2="19"></line>
+      <line x1="5" y1="12" x2="19" y2="12"></line>
+    </svg>
+  </button>
 
   <!-- Toast system -->
   <div id="toast-container" class="toast-container"></div>

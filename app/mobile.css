@@ -1191,3 +1191,124 @@ textarea {
   border-color: #c084fc !important;
 }
 
+
+/* ==========================================================================
+   FAB & ACTION MENU
+   ========================================================================== */
+.fab-main {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--accent-gradient);
+  color: white;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.4);
+  cursor: pointer;
+  z-index: 1000;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.fab-main:active {
+  transform: translateX(-50%) scale(0.9);
+}
+
+.fab-icon-plus {
+  transition: transform 0.3s ease;
+}
+
+.fab-main.active .fab-icon-plus {
+  transform: rotate(45deg);
+}
+
+.fab-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(4, 6, 15, 0.8);
+  backdrop-filter: blur(4px);
+  z-index: 998;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+}
+
+.fab-overlay.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.fab-menu {
+  position: fixed;
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px) scale(0.9);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  z-index: 999;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  pointer-events: none;
+}
+
+.fab-menu.active {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0) scale(1);
+  pointer-events: all;
+}
+
+.fab-action-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.fab-action-label {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  padding: 6px 14px;
+  border-radius: var(--radius-md);
+  font-size: 0.95rem;
+  font-weight: 600;
+  border: 1px solid var(--border-default);
+  box-shadow: var(--shadow-md);
+}
+
+.fab-action-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  box-shadow: var(--shadow-md);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.fab-action-icon.income-icon {
+  background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+}
+
+.fab-action-icon.expense-icon {
+  background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+}
+
+.fab-action-item:active .fab-action-icon {
+  transform: scale(0.9);
+}
