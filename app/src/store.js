@@ -143,8 +143,26 @@ export async function syncWithSupabase() {
       pageExp++;
     }
 
-    // 3. Clear local storage cache and rebuild
-    const store = { expenses: {}, incomes: {} };
+    // 3. Fetch catalogs from Supabase (if table exists)
+    let dbCatalogs = [];
+    try {
+      const { data: catData, error: catError } = await supabase
+        .from('catalogs')
+        .select('*')
+        .eq('user_id', userId);
+      if (!catError && catData) {
+        dbCatalogs = catData;
+      }
+    } catch (e) {
+      console.warn('Could not fetch catalogs from Supabase:', e);
+    }
+
+    // 4. Clear local storage cache and rebuild
+    const store = {
+      expenses: {},
+      incomes: {},
+      catalogs: { companies: [], concepts: [], beneficiaries: [] }
+    };
 
     for (const dbInc of dbIncomes) {
       const inc = mapIncomeFromDB(dbInc);
@@ -162,6 +180,17 @@ export async function syncWithSupabase() {
       store.expenses[key].push(exp);
     }
 
+    for (const cat of dbCatalogs) {
+      if (cat.type === 'company') {
+        store.catalogs.companies.push({ id: cat.id, name: cat.name });
+      } else if (cat.type === 'concept') {
+        store.catalogs.concepts.push({ id: cat.id, name: cat.name, defaultType: cat.default_type || 'variable' });
+      } else if (cat.type === 'beneficiary') {
+        store.catalogs.beneficiaries.push({ id: cat.id, name: cat.name });
+      }
+    }
+
+    ensureCatalogs(store);
     saveStore(store);
     return true;
   } catch (err) {
@@ -196,6 +225,7 @@ export function setupRealtimeSync() {
     window._realtimeChannel = supabase.channel('schema-db-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses', filter: `user_id=eq.${userId}` }, triggerSync)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'incomes', filter: `user_id=eq.${userId}` }, triggerSync)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'catalogs', filter: `user_id=eq.${userId}` }, triggerSync)
       .subscribe();
   });
 }
@@ -450,12 +480,72 @@ function migrateAndNormalizeStore(store) {
   return migrated;
 }
 
-function getStore() {
+export const DEFAULT_BENEFICIARIES = ['María Hortencia', 'Luisa Velásquez', 'Freddy', 'Zitiu', 'Esmyll León'];
+
+export function ensureCatalogs(store) {
+  if (!store.catalogs) {
+    store.catalogs = { companies: [], concepts: [], beneficiaries: [] };
+  }
+  if (!Array.isArray(store.catalogs.companies)) store.catalogs.companies = [];
+  if (!Array.isArray(store.catalogs.concepts)) store.catalogs.concepts = [];
+  if (!Array.isArray(store.catalogs.beneficiaries)) store.catalogs.beneficiaries = [];
+
+  let changed = false;
+
+  // Auto-seed companies from historical records if catalogs.companies is empty
+  if (store.catalogs.companies.length === 0 && store.incomes) {
+    const comps = new Set();
+    for (const list of Object.values(store.incomes)) {
+      for (const item of list) {
+        if (item.company && item.company.trim()) comps.add(item.company.trim());
+      }
+    }
+    for (const name of comps) {
+      store.catalogs.companies.push({ id: uuid(), name });
+      changed = true;
+    }
+  }
+
+  // Auto-seed concepts from historical records if catalogs.concepts is empty
+  if (store.catalogs.concepts.length === 0 && store.expenses) {
+    const concMap = new Map();
+    for (const list of Object.values(store.expenses)) {
+      for (const item of list) {
+        if (item.concept && item.concept.trim()) {
+          const name = item.concept.trim();
+          if (!concMap.has(name)) {
+            concMap.set(name, item.type === 'fijo' ? 'fijo' : 'variable');
+          }
+        }
+      }
+    }
+    for (const [name, defaultType] of concMap.entries()) {
+      store.catalogs.concepts.push({ id: uuid(), name, defaultType });
+      changed = true;
+    }
+  }
+
+  // Auto-seed beneficiaries if empty
+  if (store.catalogs.beneficiaries.length === 0) {
+    for (const name of DEFAULT_BENEFICIARIES) {
+      store.catalogs.beneficiaries.push({ id: uuid(), name });
+      changed = true;
+    }
+  }
+
+  return changed;
+}
+
+export function getStore() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const store = JSON.parse(raw);
-      if (migrateAndNormalizeStore(store)) {
+      let changed = migrateAndNormalizeStore(store);
+      if (ensureCatalogs(store)) {
+        changed = true;
+      }
+      if (changed) {
         saveStore(store);
       }
       return store;
@@ -463,7 +553,9 @@ function getStore() {
   } catch (e) {
     console.error('Error reading store:', e);
   }
-  return { expenses: {}, incomes: {} };
+  const defaultStore = { expenses: {}, incomes: {}, catalogs: { companies: [], concepts: [], beneficiaries: [] } };
+  ensureCatalogs(defaultStore);
+  return defaultStore;
 }
 
 function saveStore(data) {
@@ -1045,24 +1137,178 @@ export function getMonthTotals(year, month) {
 
 export function getAllConcepts() {
   const store = getStore();
+  if (store.catalogs && Array.isArray(store.catalogs.concepts) && store.catalogs.concepts.length > 0) {
+    return store.catalogs.concepts.map(c => c.name).sort((a, b) => a.localeCompare(b));
+  }
   const concepts = new Set();
   for (const items of Object.values(store.expenses)) {
     for (const item of items) {
       if (item.concept) concepts.add(item.concept);
     }
   }
-  return Array.from(concepts).sort();
+  return Array.from(concepts).sort((a, b) => a.localeCompare(b));
+}
+
+export function getAllConceptsObjects() {
+  const store = getStore();
+  if (store.catalogs && Array.isArray(store.catalogs.concepts)) {
+    return store.catalogs.concepts;
+  }
+  return [];
 }
 
 export function getAllCompanies() {
   const store = getStore();
+  if (store.catalogs && Array.isArray(store.catalogs.companies) && store.catalogs.companies.length > 0) {
+    return store.catalogs.companies.map(c => c.name).sort((a, b) => a.localeCompare(b));
+  }
   const companies = new Set();
   for (const items of Object.values(store.incomes)) {
     for (const item of items) {
       if (item.company) companies.add(item.company);
     }
   }
-  return Array.from(companies).sort();
+  return Array.from(companies).sort((a, b) => a.localeCompare(b));
+}
+
+export function getAllBeneficiaries() {
+  const store = getStore();
+  if (store.catalogs && Array.isArray(store.catalogs.beneficiaries) && store.catalogs.beneficiaries.length > 0) {
+    return store.catalogs.beneficiaries.map(b => b.name).sort((a, b) => a.localeCompare(b));
+  }
+  return [...DEFAULT_BENEFICIARIES];
+}
+
+export function getCatalogs() {
+  const store = getStore();
+  return store.catalogs || { companies: [], concepts: [], beneficiaries: [] };
+}
+
+export function getCatalogList(type) {
+  const store = getStore();
+  return (store.catalogs && store.catalogs[type]) ? store.catalogs[type] : [];
+}
+
+export async function addCatalogItem(type, itemData) {
+  const { data: { session } } = await supabase.auth.getSession();
+  const store = getStore();
+  
+  const newItem = {
+    id: uuid(),
+    name: (itemData.name || '').trim(),
+    ...(type === 'concepts' ? { defaultType: itemData.defaultType || 'variable' } : {})
+  };
+
+  if (!newItem.name) throw new Error('El nombre no puede estar vacío');
+
+  if (!store.catalogs[type]) store.catalogs[type] = [];
+  store.catalogs[type].push(newItem);
+  saveStore(store);
+
+  if (session) {
+    try {
+      const dbRow = {
+        id: newItem.id,
+        user_id: session.user.id,
+        type: type === 'companies' ? 'company' : type === 'concepts' ? 'concept' : 'beneficiary',
+        name: newItem.name,
+        default_type: newItem.defaultType || null
+      };
+      await supabase.from('catalogs').insert(dbRow);
+    } catch (e) {
+      console.warn('Supabase catalog insert optional:', e);
+    }
+  }
+
+  window.dispatchEvent(new CustomEvent('data-changed'));
+  return newItem;
+}
+
+export async function updateCatalogItem(type, id, updates) {
+  const { data: { session } } = await supabase.auth.getSession();
+  const store = getStore();
+
+  const list = (store.catalogs && store.catalogs[type]) || [];
+  const item = list.find(i => i.id === id);
+  if (!item) throw new Error('Elemento no encontrado en el catálogo');
+
+  if (updates.name !== undefined) item.name = updates.name.trim();
+  if (type === 'concepts' && updates.defaultType !== undefined) {
+    item.defaultType = updates.defaultType;
+  }
+
+  saveStore(store);
+
+  if (session) {
+    try {
+      const dbUpdates = {
+        name: item.name,
+        ...(type === 'concepts' ? { default_type: item.defaultType } : {})
+      };
+      await supabase.from('catalogs').update(dbUpdates).eq('id', id).eq('user_id', session.user.id);
+    } catch (e) {
+      console.warn('Supabase catalog update optional:', e);
+    }
+  }
+
+  window.dispatchEvent(new CustomEvent('data-changed'));
+  return item;
+}
+
+export async function deleteCatalogItem(type, id) {
+  const { data: { session } } = await supabase.auth.getSession();
+  const store = getStore();
+
+  const list = (store.catalogs && store.catalogs[type]) || [];
+  const idx = list.findIndex(i => i.id === id);
+  if (idx !== -1) {
+    list.splice(idx, 1);
+    saveStore(store);
+
+    if (session) {
+      try {
+        await supabase.from('catalogs').delete().eq('id', id).eq('user_id', session.user.id);
+      } catch (e) {
+        console.warn('Supabase catalog delete optional:', e);
+      }
+    }
+
+    window.dispatchEvent(new CustomEvent('data-changed'));
+    return true;
+  }
+  return false;
+}
+
+export function getCatalogUsageStats() {
+  const store = getStore();
+  const stats = {
+    companies: {},
+    concepts: {},
+    beneficiaries: {}
+  };
+
+  // Count company uses
+  for (const list of Object.values(store.incomes || {})) {
+    for (const item of list) {
+      if (item.company) {
+        stats.companies[item.company] = (stats.companies[item.company] || 0) + 1;
+      }
+      if (item.commissionRecipient) {
+        stats.beneficiaries[item.commissionRecipient] = (stats.beneficiaries[item.commissionRecipient] || 0) + 1;
+      }
+    }
+  }
+
+  // Count concept uses
+  for (const list of Object.values(store.expenses || {})) {
+    for (const item of list) {
+      if (item.concept) {
+        stats.concepts[item.concept] = (stats.concepts[item.concept] || 0) + 1;
+      }
+    }
+  }
+
+  return stats;
 }
 
 export function getExpensesByConceptForMonth(year, month) {

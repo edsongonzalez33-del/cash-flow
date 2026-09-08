@@ -5,6 +5,7 @@ import { importData, exportData, hasData, syncWithSupabase, uploadLocalDataToSup
 import { initDashboard, renderDashboard, setDashboardMonth } from './dashboard.js';
 import { initExpenses, renderExpenses, setExpensesMonth, handleExpenseDelete } from './expenses.js';
 import { initIncomes, renderIncomes, setIncomesMonth, handleIncomeDelete } from './incomes.js';
+import { initCatalogs, renderCatalogs } from './catalogs.js';
 import { initAuth, logout } from './auth.js';
 import { $, $$, showToast } from './utils.js';
 
@@ -20,6 +21,7 @@ async function boot() {
   initDashboard(globalYear, globalMonth, onDashboardMonthChange);
   initExpenses(globalYear, globalMonth, onExpensesMonthChange);
   initIncomes(globalYear, globalMonth, onIncomesMonthChange);
+  initCatalogs();
 
   // Set up navigation
   setupNavigation();
@@ -50,6 +52,7 @@ async function boot() {
     renderDashboard();
     renderExpenses();
     renderIncomes();
+    renderCatalogs();
   });
 
   // Initialize Supabase Auth
@@ -70,6 +73,7 @@ async function boot() {
     renderDashboard();
     renderExpenses();
     renderIncomes();
+    renderCatalogs();
   });
 }
 
@@ -99,9 +103,13 @@ function navigateTo(sectionName) {
   if (navEl) navEl.classList.add('active');
 
   // Update sections
-  $$('.section').forEach(s => s.classList.remove('active'));
+  $$('.content-section').forEach(s => s.classList.remove('active'));
   const secEl = $(`#section-${sectionName}`);
   if (secEl) secEl.classList.add('active');
+
+  if (sectionName === 'catalogs') {
+    renderCatalogs();
+  }
 
   // Close mobile menu
   $('#sidebar').classList.remove('open');
@@ -110,7 +118,8 @@ function navigateTo(sectionName) {
   const titles = {
     dashboard: 'Dashboard | Flujo de Caja',
     expenses: 'Gastos | Flujo de Caja',
-    incomes: 'Ingresos | Flujo de Caja'
+    incomes: 'Ingresos | Flujo de Caja',
+    catalogs: 'Catálogos | Flujo de Caja'
   };
   document.title = titles[sectionName] || 'Flujo de Caja';
 }

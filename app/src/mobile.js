@@ -7,7 +7,7 @@ import {
   getIncomes, addIncome, updateIncome, deleteIncome,
   getExpenses, addExpense, updateExpense, deleteExpense,
   getMonthTotals, syncWithSupabase, getPendingCommissions,
-  getAllCompanies, getAllConcepts, setupRealtimeSync
+  getAllCompanies, getAllConcepts, getAllBeneficiaries, getAllConceptsObjects, setupRealtimeSync
 } from './store.js';
 import {
   formatCurrency, formatDate, formatMonthLabel, navigateMonth,
@@ -535,6 +535,17 @@ function openFormModal(type, record = null) {
     const activeCheckbox = $('#field-commission-active');
     activeCheckbox.checked = isEdit ? !!record.commissionActive : false;
     
+    // Populate beneficiaries select dynamically
+    const recipSelect = $('#field-commission-recipient');
+    if (recipSelect) {
+      const beneficiaries = getAllBeneficiaries();
+      const currentRecip = isEdit ? record.commissionRecipient || '' : '';
+      recipSelect.innerHTML = `
+        <option value="">Selecciona beneficiario</option>
+        ${beneficiaries.map(b => `<option value="${escapeHtml(b)}" ${b === currentRecip ? 'selected' : ''}>${escapeHtml(b)}</option>`).join('')}
+      `;
+    }
+
     // Set Commission values if edit mode
     $('#field-commission-recipient').value = isEdit ? record.commissionRecipient || '' : '';
     $('#field-commission-status').value = isEdit ? record.commissionStatus || 'pendiente' : 'pendiente';
@@ -554,6 +565,20 @@ function openFormModal(type, record = null) {
     $('#commission-panel').style.display = 'none';
 
     $('#field-expense-type').value = isEdit ? record.type || 'fijo' : 'fijo';
+
+    // Auto-detect defaultType from concept catalog
+    const conceptObjs = getAllConceptsObjects();
+    const conceptField = $('#field-concept');
+    const typeField = $('#field-expense-type');
+    if (conceptField && typeField && !isEdit) {
+      conceptField.oninput = (e) => {
+        const val = (e.target.value || '').trim().toLowerCase();
+        const match = conceptObjs.find(c => (c.name || '').trim().toLowerCase() === val);
+        if (match && match.defaultType) {
+          typeField.value = match.defaultType;
+        }
+      };
+    }
   }
 
   // Bind Form dynamic calculations

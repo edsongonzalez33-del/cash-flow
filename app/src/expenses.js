@@ -2,7 +2,7 @@
 // Expenses Module - CRUD operations and UI for expenses
 // ============================================================
 import {
-  getExpenses, addExpense, updateExpense, deleteExpense, getMonthTotals, getAllConcepts
+  getExpenses, addExpense, updateExpense, deleteExpense, getMonthTotals, getAllConcepts, getAllConceptsObjects
 } from './store.js';
 import { fetchBcvRate } from './bcvService.js';
 import {
@@ -276,6 +276,20 @@ function openExpenseModal(expense = null) {
 
   amountField.addEventListener('input', updateCalculationsAndNotes);
   rateField.addEventListener('input', updateCalculationsAndNotes);
+
+  const conceptInput = $('#field-concept');
+  const typeSelect = $('#field-type');
+  const conceptCatalog = getAllConceptsObjects();
+
+  if (conceptInput && typeSelect && !isEdit) {
+    conceptInput.addEventListener('input', (e) => {
+      const val = (e.target.value || '').trim().toLowerCase();
+      const match = conceptCatalog.find(c => (c.name || '').trim().toLowerCase() === val);
+      if (match && match.defaultType) {
+        typeSelect.value = match.defaultType;
+      }
+    });
+  }
 
   // Initialize
   updateCalculationsAndNotes();

@@ -3,7 +3,7 @@
 // ============================================================
 import {
   getIncomes, addIncome, updateIncome, deleteIncome, getMonthTotals,
-  getAllCompanies
+  getAllCompanies, getAllBeneficiaries
 } from './store.js';
 import { fetchBcvRate } from './bcvService.js';
 import {
@@ -223,11 +223,7 @@ function openIncomeModal(income = null) {
           <label for="field-commission-recipient">Beneficiario</label>
           <select id="field-commission-recipient" class="filter-select" style="width: 100%; min-width: unset; height: 38px;">
             <option value="">Selecciona beneficiario</option>
-            <option value="María Hortencia" ${income?.commissionRecipient === 'María Hortencia' ? 'selected' : ''}>María Hortencia</option>
-            <option value="Luisa Velásquez" ${income?.commissionRecipient === 'Luisa Velásquez' ? 'selected' : ''}>Luisa Velásquez</option>
-            <option value="Freddy" ${income?.commissionRecipient === 'Freddy' ? 'selected' : ''}>Freddy</option>
-            <option value="Zitiu" ${income?.commissionRecipient === 'Zitiu' ? 'selected' : ''}>Zitiu</option>
-            <option value="Esmyll León" ${income?.commissionRecipient === 'Esmyll León' ? 'selected' : ''}>Esmyll León</option>
+            ${getAllBeneficiaries().map(b => `<option value="${escapeHtml(b)}" ${income?.commissionRecipient === b ? 'selected' : ''}>${escapeHtml(b)}</option>`).join('')}
           </select>
         </div>
         <div class="form-group">
