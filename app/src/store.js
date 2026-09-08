@@ -150,12 +150,14 @@ export async function syncWithSupabase() {
         .from('catalogs')
         .select('*')
         .eq('user_id', userId);
-      if (!catError && catData) {
+      if (!catError && Array.isArray(catData) && catData.length > 0) {
         dbCatalogs = catData;
       }
     } catch (e) {
       console.warn('Could not fetch catalogs from Supabase:', e);
     }
+
+    const prevStore = getStore();
 
     // 4. Clear local storage cache and rebuild
     const store = {
@@ -180,17 +182,27 @@ export async function syncWithSupabase() {
       store.expenses[key].push(exp);
     }
 
-    for (const cat of dbCatalogs) {
-      if (cat.type === 'company') {
-        store.catalogs.companies.push({ id: cat.id, name: cat.name });
-      } else if (cat.type === 'concept') {
-        store.catalogs.concepts.push({ id: cat.id, name: cat.name, defaultType: cat.default_type || 'variable' });
-      } else if (cat.type === 'beneficiary') {
-        store.catalogs.beneficiaries.push({ id: cat.id, name: cat.name });
+    if (dbCatalogs.length > 0) {
+      for (const cat of dbCatalogs) {
+        if (cat.type === 'company') {
+          store.catalogs.companies.push({ id: cat.id, name: cat.name });
+        } else if (cat.type === 'concept') {
+          store.catalogs.concepts.push({ id: cat.id, name: cat.name, defaultType: cat.default_type || 'variable' });
+        } else if (cat.type === 'beneficiary') {
+          store.catalogs.beneficiaries.push({ id: cat.id, name: cat.name });
+        }
       }
+    } else if (prevStore.catalogs && (
+      (prevStore.catalogs.companies && prevStore.catalogs.companies.length > 0) ||
+      (prevStore.catalogs.concepts && prevStore.catalogs.concepts.length > 0) ||
+      (prevStore.catalogs.beneficiaries && prevStore.catalogs.beneficiaries.length > 0)
+    )) {
+      // PRESERVE user's catalog customizations!
+      store.catalogs = prevStore.catalogs;
+    } else {
+      ensureCatalogs(store);
     }
 
-    ensureCatalogs(store);
     saveStore(store);
     return true;
   } catch (err) {
@@ -1214,7 +1226,7 @@ export async function addCatalogItem(type, itemData) {
         name: newItem.name,
         default_type: newItem.defaultType || null
       };
-      await supabase.from('catalogs').insert(dbRow);
+      await supabase.from('catalogs').upsert(dbRow);
     } catch (e) {
       console.warn('Supabase catalog insert optional:', e);
     }
@@ -1232,9 +1244,53 @@ export async function updateCatalogItem(type, id, updates) {
   const item = list.find(i => i.id === id);
   if (!item) throw new Error('Elemento no encontrado en el catálogo');
 
-  if (updates.name !== undefined) item.name = updates.name.trim();
+  const oldName = item.name;
+  const newName = updates.name !== undefined ? updates.name.trim() : oldName;
+  item.name = newName;
+
   if (type === 'concepts' && updates.defaultType !== undefined) {
     item.defaultType = updates.defaultType;
+  }
+
+  // Cascade rename in historical records if name changed
+  if (oldName && newName && oldName !== newName) {
+    if (type === 'companies' && store.incomes) {
+      for (const list of Object.values(store.incomes)) {
+        for (const inc of list) {
+          if (inc.company === oldName) {
+            inc.company = newName;
+            if (session) {
+              const dbRow = mapIncomeToDB(inc, session.user.id);
+              supabase.from('incomes').upsert(dbRow).then(() => {});
+            }
+          }
+        }
+      }
+    } else if (type === 'concepts' && store.expenses) {
+      for (const list of Object.values(store.expenses)) {
+        for (const exp of list) {
+          if (exp.concept === oldName) {
+            exp.concept = newName;
+            if (session) {
+              const dbRow = mapExpenseToDB(exp, session.user.id);
+              supabase.from('expenses').upsert(dbRow).then(() => {});
+            }
+          }
+        }
+      }
+    } else if (type === 'beneficiaries' && store.incomes) {
+      for (const list of Object.values(store.incomes)) {
+        for (const inc of list) {
+          if (inc.commissionRecipient === oldName) {
+            inc.commissionRecipient = newName;
+            if (session) {
+              const dbRow = mapIncomeToDB(inc, session.user.id);
+              supabase.from('incomes').upsert(dbRow).then(() => {});
+            }
+          }
+        }
+      }
+    }
   }
 
   saveStore(store);
@@ -1242,10 +1298,13 @@ export async function updateCatalogItem(type, id, updates) {
   if (session) {
     try {
       const dbUpdates = {
+        id: item.id,
+        user_id: session.user.id,
+        type: type === 'companies' ? 'company' : type === 'concepts' ? 'concept' : 'beneficiary',
         name: item.name,
-        ...(type === 'concepts' ? { default_type: item.defaultType } : {})
+        default_type: item.defaultType || null
       };
-      await supabase.from('catalogs').update(dbUpdates).eq('id', id).eq('user_id', session.user.id);
+      await supabase.from('catalogs').upsert(dbUpdates);
     } catch (e) {
       console.warn('Supabase catalog update optional:', e);
     }
