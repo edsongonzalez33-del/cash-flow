@@ -14,7 +14,7 @@ const TAB_CONFIG = {
   companies: {
     title: 'Compañías / Orígenes',
     singular: 'Compañía',
-    btnText: '+ Nueva Compañía',
+    btnText: 'Nueva Compañía',
     emptyText: 'No hay compañías registradas en el catálogo.',
     typeLabel: 'Tipo',
     placeholder: 'Ej: Oceánica, Mercantil, Particular...'
@@ -22,7 +22,7 @@ const TAB_CONFIG = {
   concepts: {
     title: 'Conceptos de Gasto',
     singular: 'Concepto',
-    btnText: '+ Nuevo Concepto',
+    btnText: 'Nuevo Concepto',
     emptyText: 'No hay conceptos de gasto registrados en el catálogo.',
     typeLabel: 'Tipo Predeterminado',
     placeholder: 'Ej: Alquiler Oficina, Internet, Repuestos...'
@@ -30,7 +30,7 @@ const TAB_CONFIG = {
   beneficiaries: {
     title: 'Beneficiarios de Comisión',
     singular: 'Beneficiario',
-    btnText: '+ Nuevo Beneficiario',
+    btnText: 'Nuevo Beneficiario',
     emptyText: 'No hay beneficiarios registrados en el catálogo.',
     typeLabel: 'Rol',
     placeholder: 'Ej: María Hortencia, Freddy...'
@@ -157,7 +157,7 @@ export function renderCatalogs() {
                 <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
               </svg>
             </button>
-            <button class="btn-icon btn-delete-catalog btn-danger" data-id="${item.id}" title="Eliminar">
+            <button class="btn-icon delete btn-delete-catalog" data-id="${item.id}" title="Eliminar">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <polyline points="3 6 5 6 21 6"></polyline>
                 <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
