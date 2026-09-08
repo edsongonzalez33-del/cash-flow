@@ -951,10 +951,10 @@ textarea {
 /* ===================== TOAST SYSTEM ===================== */
 .toast-container {
   position: fixed;
-  bottom: 24px;
+  top: 20px;
   left: 20px;
   right: 20px;
-  z-index: 1000;
+  z-index: 2000;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -1200,8 +1200,8 @@ textarea {
   bottom: 24px;
   left: 50%;
   transform: translateX(-50%);
-  width: 64px;
-  height: 64px;
+  width: 62px;
+  height: 62px;
   border-radius: 50%;
   background: var(--accent-gradient);
   color: white;
@@ -1209,22 +1209,29 @@ textarea {
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.4);
+  box-shadow: 0 8px 28px rgba(99, 102, 241, 0.45);
   cursor: pointer;
   z-index: 1000;
   transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 .fab-main:active {
-  transform: translateX(-50%) scale(0.9);
+  transform: translateX(-50%) scale(0.92);
 }
 
 .fab-icon-plus {
-  transition: transform 0.3s ease;
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.fab-main.active {
+  background: #1e293b;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
 }
 
 .fab-main.active .fab-icon-plus {
   transform: rotate(45deg);
+  color: #ef4444;
 }
 
 .fab-overlay {
@@ -1233,12 +1240,13 @@ textarea {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(4, 6, 15, 0.8);
-  backdrop-filter: blur(4px);
+  background: rgba(4, 6, 15, 0.82);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   z-index: 998;
   opacity: 0;
   visibility: hidden;
-  transition: all 0.3s ease;
+  transition: all 0.25s ease;
 }
 
 .fab-overlay.active {
@@ -1248,12 +1256,14 @@ textarea {
 
 .fab-menu {
   position: fixed;
-  bottom: 100px;
+  bottom: 102px;
   left: 50%;
-  transform: translateX(-50%) translateY(20px) scale(0.9);
+  transform: translateX(-50%) translateY(24px) scale(0.94);
+  width: calc(100% - 40px);
+  max-width: 360px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
   z-index: 999;
   opacity: 0;
   visibility: hidden;
@@ -1268,47 +1278,114 @@ textarea {
   pointer-events: all;
 }
 
-.fab-action-item {
+.fab-menu-header {
+  text-align: center;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 2px;
+}
+
+.fab-action-card {
+  width: 100%;
   display: flex;
   align-items: center;
-  gap: 12px;
-  background: transparent;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-}
-
-.fab-action-label {
-  background: var(--bg-secondary);
-  color: var(--text-primary);
-  padding: 6px 14px;
-  border-radius: var(--radius-md);
-  font-size: 0.95rem;
-  font-weight: 600;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: var(--radius-lg);
+  background: rgba(18, 24, 38, 0.95);
   border: 1px solid var(--border-default);
-  box-shadow: var(--shadow-md);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
-.fab-action-icon {
+.fab-action-card:active {
+  transform: scale(0.97);
+}
+
+.fab-card-income {
+  border-color: rgba(16, 185, 129, 0.35);
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(13, 17, 29, 0.95) 100%);
+}
+
+.fab-card-income:active {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.22) 0%, rgba(13, 17, 29, 0.98) 100%);
+  border-color: #10b981;
+}
+
+.fab-card-expense {
+  border-color: rgba(245, 158, 11, 0.35);
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(13, 17, 29, 0.95) 100%);
+}
+
+.fab-card-expense:active {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.22) 0%, rgba(13, 17, 29, 0.98) 100%);
+  border-color: #f59e0b;
+}
+
+.fab-card-icon-wrap {
   width: 48px;
   height: 48px;
-  border-radius: 50%;
+  border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
-  box-shadow: var(--shadow-md);
-  border: 2px solid rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
 }
 
-.fab-action-icon.income-icon {
+.income-glow {
   background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.4);
 }
 
-.fab-action-icon.expense-icon {
+.expense-glow {
   background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+  box-shadow: 0 4px 16px rgba(245, 158, 11, 0.4);
 }
 
-.fab-action-item:active .fab-action-icon {
-  transform: scale(0.9);
+.fab-card-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.fab-card-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.text-income {
+  color: #34d399;
+}
+
+.text-expense {
+  color: #fbbf24;
+}
+
+.fab-card-subtitle {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  line-height: 1.2;
+}
+
+.fab-card-arrow {
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.fab-action-card:active .fab-card-arrow {
+  transform: translateX(3px);
+  color: var(--text-primary);
 }

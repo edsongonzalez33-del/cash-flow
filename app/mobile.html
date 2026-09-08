@@ -38,7 +38,7 @@
         </div>
       </div>
       <div class="header-actions">
-        <span style="font-size: 0.7rem; color: var(--text-secondary); font-weight: bold; margin-right: 4px;">v13</span>
+        <span style="font-size: 0.7rem; color: var(--text-secondary); font-weight: bold; margin-right: 4px;">v14</span>
         <button class="btn-config" id="btn-config" aria-label="Configuración">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="3"></circle>
@@ -336,21 +336,38 @@
   <!-- ===================== FAB & ACTION MENU ===================== -->
   <div class="fab-overlay" id="fab-overlay"></div>
   <div class="fab-menu" id="fab-menu">
-    <button class="fab-action-item" id="fab-btn-income">
-      <span class="fab-action-label">Ingreso</span>
-      <div class="fab-action-icon income-icon">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+    <div class="fab-menu-header">
+      <span>¿Qué deseas registrar?</span>
+    </div>
+    
+    <button class="fab-action-card fab-card-income" id="fab-btn-income">
+      <div class="fab-card-icon-wrap income-glow">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <line x1="12" y1="5" x2="12" y2="19"></line>
           <line x1="5" y1="12" x2="19" y2="12"></line>
         </svg>
       </div>
+      <div class="fab-card-info">
+        <span class="fab-card-title text-income">Nuevo Ingreso</span>
+        <span class="fab-card-subtitle">Cobro de póliza, comisión, etc.</span>
+      </div>
+      <div class="fab-card-arrow">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+      </div>
     </button>
-    <button class="fab-action-item" id="fab-btn-expense">
-      <span class="fab-action-label">Gasto</span>
-      <div class="fab-action-icon expense-icon">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4">
+
+    <button class="fab-action-card fab-card-expense" id="fab-btn-expense">
+      <div class="fab-card-icon-wrap expense-glow">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
           <line x1="5" y1="12" x2="19" y2="12"></line>
         </svg>
+      </div>
+      <div class="fab-card-info">
+        <span class="fab-card-title text-expense">Nuevo Gasto</span>
+        <span class="fab-card-subtitle">Pago fijo, compras, servicios...</span>
+      </div>
+      <div class="fab-card-arrow">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
       </div>
     </button>
   </div>
