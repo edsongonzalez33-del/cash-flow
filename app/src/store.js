@@ -143,7 +143,7 @@ export async function syncWithSupabase() {
       pageExp++;
     }
 
-    // 3. Fetch catalogs from Supabase (if table exists)
+    // 3. Fetch catalogs from Supabase (DB table and user metadata for cross-device sync)
     let dbCatalogs = [];
     try {
       const { data: catData, error: catError } = await supabase
@@ -154,7 +154,20 @@ export async function syncWithSupabase() {
         dbCatalogs = catData;
       }
     } catch (e) {
-      console.warn('Could not fetch catalogs from Supabase:', e);
+      console.warn('Could not fetch catalogs table from Supabase:', e);
+    }
+
+    let metaCatalogs = null;
+    try {
+      // Always fetch fresh user metadata directly from the Supabase server
+      const { data: freshUserData, error: userError } = await supabase.auth.getUser();
+      if (!userError && freshUserData?.user?.user_metadata?.catalogs) {
+        metaCatalogs = freshUserData.user.user_metadata.catalogs;
+      } else if (session.user?.user_metadata?.catalogs) {
+        metaCatalogs = session.user.user_metadata.catalogs;
+      }
+    } catch (e) {
+      console.warn('Could not fetch user metadata catalogs:', e);
     }
 
     const prevStore = getStore();
@@ -192,15 +205,24 @@ export async function syncWithSupabase() {
           store.catalogs.beneficiaries.push({ id: cat.id, name: cat.name });
         }
       }
+    } else if (metaCatalogs && (
+      (metaCatalogs.companies && metaCatalogs.companies.length > 0) ||
+      (metaCatalogs.concepts && metaCatalogs.concepts.length > 0) ||
+      (metaCatalogs.beneficiaries && metaCatalogs.beneficiaries.length > 0)
+    )) {
+      // Sync from Supabase User Metadata (guaranteed to work across PC and Mobile!)
+      store.catalogs = metaCatalogs;
     } else if (prevStore.catalogs && (
       (prevStore.catalogs.companies && prevStore.catalogs.companies.length > 0) ||
       (prevStore.catalogs.concepts && prevStore.catalogs.concepts.length > 0) ||
       (prevStore.catalogs.beneficiaries && prevStore.catalogs.beneficiaries.length > 0)
     )) {
-      // PRESERVE user's catalog customizations!
+      // PRESERVE user's catalog customizations and push to cloud metadata!
       store.catalogs = prevStore.catalogs;
+      pushCatalogsToCloud(store.catalogs);
     } else {
       ensureCatalogs(store);
+      pushCatalogsToCloud(store.catalogs);
     }
 
     saveStore(store);
@@ -208,6 +230,34 @@ export async function syncWithSupabase() {
   } catch (err) {
     console.error('Failed to sync with Supabase:', err);
     return false;
+  }
+}
+
+let catalogsRealtimeChannel = null;
+
+/**
+ * Pushes catalog changes to Supabase user metadata and broadcasts to all clients
+ */
+export async function pushCatalogsToCloud(catalogs) {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      await supabase.auth.updateUser({
+        data: {
+          catalogs: catalogs,
+          catalogs_updated_at: Date.now()
+        }
+      });
+      if (catalogsRealtimeChannel) {
+        catalogsRealtimeChannel.send({
+          type: 'broadcast',
+          event: 'catalogs_updated',
+          payload: { catalogs }
+        }).catch(() => {});
+      }
+    }
+  } catch (e) {
+    console.warn('Error pushing catalogs to Supabase metadata:', e);
   }
 }
 
@@ -221,6 +271,9 @@ export function setupRealtimeSync() {
 
     if (window._realtimeChannel) {
       supabase.removeChannel(window._realtimeChannel);
+    }
+    if (catalogsRealtimeChannel) {
+      supabase.removeChannel(catalogsRealtimeChannel);
     }
 
     let syncTimeout = null;
@@ -238,6 +291,17 @@ export function setupRealtimeSync() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses', filter: `user_id=eq.${userId}` }, triggerSync)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'incomes', filter: `user_id=eq.${userId}` }, triggerSync)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'catalogs', filter: `user_id=eq.${userId}` }, triggerSync)
+      .subscribe();
+
+    catalogsRealtimeChannel = supabase.channel('app-catalogs-sync')
+      .on('broadcast', { event: 'catalogs_updated' }, (payload) => {
+        if (payload?.payload?.catalogs) {
+          const store = getStore();
+          store.catalogs = payload.payload.catalogs;
+          saveStore(store);
+          window.dispatchEvent(new CustomEvent('data-changed'));
+        }
+      })
       .subscribe();
   });
 }
@@ -1218,6 +1282,7 @@ export async function addCatalogItem(type, itemData) {
   saveStore(store);
 
   if (session) {
+    await pushCatalogsToCloud(store.catalogs);
     try {
       const dbRow = {
         id: newItem.id,
@@ -1296,6 +1361,7 @@ export async function updateCatalogItem(type, id, updates) {
   saveStore(store);
 
   if (session) {
+    await pushCatalogsToCloud(store.catalogs);
     try {
       const dbUpdates = {
         id: item.id,
@@ -1325,6 +1391,7 @@ export async function deleteCatalogItem(type, id) {
     saveStore(store);
 
     if (session) {
+      await pushCatalogsToCloud(store.catalogs);
       try {
         await supabase.from('catalogs').delete().eq('id', id).eq('user_id', session.user.id);
       } catch (e) {
