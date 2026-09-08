@@ -103,7 +103,7 @@ function navigateTo(sectionName) {
   if (navEl) navEl.classList.add('active');
 
   // Update sections
-  $$('.content-section').forEach(s => s.classList.remove('active'));
+  $$('.section').forEach(s => s.classList.remove('active'));
   const secEl = $(`#section-${sectionName}`);
   if (secEl) secEl.classList.add('active');
 
