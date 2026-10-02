@@ -28,12 +28,23 @@ export async function fetchBcvRate() {
 
     const data = await response.json();
     
+    let bcvData = null;
     if (Array.isArray(data) && data.length > 0) {
-      const bcvData = data[0];
-      if (bcvData && typeof bcvData.tasa === 'number') {
+      bcvData = data[0];
+    } else if (data && typeof data === 'object' && !Array.isArray(data)) {
+      bcvData = data;
+    }
+
+    if (bcvData) {
+      if (typeof bcvData.tasa === 'number') {
         bcvData.tasa = Number(bcvData.tasa.toFixed(2));
+      } else if (typeof bcvData.tasa === 'string') {
+        const parsed = parseFloat(bcvData.tasa.replace(',', '.'));
+        if (!isNaN(parsed)) {
+          bcvData.tasa = Number(parsed.toFixed(2));
+        }
       }
-      return bcvData; // Retorna { id, moneda, tasa, tasa_formateada, ... }
+      return bcvData;
     }
     
     return null;

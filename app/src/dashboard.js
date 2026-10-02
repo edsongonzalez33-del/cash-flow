@@ -17,6 +17,7 @@ import {
   navigateMonth, getLastNMonthKeys, parseMonthKey, percentChange, $,
   CHART_COLORS, showToast
 } from './utils.js';
+import { fetchBcvRate } from './bcvService.js';
 
 // Register Chart.js components
 Chart.register(
@@ -250,6 +251,7 @@ function renderPendingCommissions() {
       // Populate details
       detailsP.innerHTML = `Comisión de <strong>${formatCurrency(commissionItem.amount)}</strong> para <strong>${escapeHtml(commissionItem.recipient)}</strong> por ingreso de <strong>${escapeHtml(commissionItem.company)}</strong>.`;
       rateInput.value = '';
+      rateInput.placeholder = 'Cargando tasa...';
       bsLabel.textContent = 'Bs. 0,00';
 
       const updateBsPayLabel = () => {
@@ -259,6 +261,14 @@ function renderPendingCommissions() {
       };
 
       rateInput.addEventListener('input', updateBsPayLabel);
+
+      fetchBcvRate().then(bcv => {
+        if (bcv && bcv.tasa) {
+          rateInput.value = bcv.tasa;
+          updateBsPayLabel();
+        }
+        rateInput.placeholder = 'Ej: 45.50';
+      });
 
       const closePayModal = () => {
         overlay.classList.remove('active');
