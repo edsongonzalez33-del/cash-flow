@@ -508,6 +508,28 @@ function renderExpensesBreakdownChart() {
     return titleLine;
   };
 
+  const getExpensesLegendLabels = (chart) => {
+    const chartData = chart.data;
+    if (chartData.labels.length && chartData.datasets.length) {
+      const dataset = chartData.datasets[0];
+      const total = dataset.data.reduce((acc, val) => acc + (Number(val) || 0), 0);
+      return chartData.labels.map((label, i) => {
+        const val = Number(dataset.data[i]) || 0;
+        const pct = total > 0 ? ((val / total) * 100).toFixed(1) : '0.0';
+        return {
+          text: `${label} (${pct}%)`,
+          fillStyle: dataset.backgroundColor[i] || '#ccc',
+          strokeStyle: themeColors.doughnutBorder,
+          lineWidth: 1,
+          pointStyle: 'circle',
+          hidden: isNaN(dataset.data[i]) || chart.getDatasetMeta(0).data[i]?.hidden,
+          index: i
+        };
+      });
+    }
+    return [];
+  };
+
   if (chartExpensesBreakdown) {
     chartExpensesBreakdown.data.labels = labels;
     chartExpensesBreakdown.data.datasets[0].data = data;
@@ -515,6 +537,7 @@ function renderExpensesBreakdownChart() {
     chartExpensesBreakdown.data.datasets[0].borderColor = themeColors.doughnutBorder;
     
     chartExpensesBreakdown.options.plugins.legend.labels.color = themeColors.textColor;
+    chartExpensesBreakdown.options.plugins.legend.labels.generateLabels = getExpensesLegendLabels;
     chartExpensesBreakdown.options.plugins.tooltip.backgroundColor = themeColors.tooltipBg;
     chartExpensesBreakdown.options.plugins.tooltip.titleColor = themeColors.tooltipTitle;
     chartExpensesBreakdown.options.plugins.tooltip.bodyColor = themeColors.tooltipBody;
@@ -549,7 +572,10 @@ function renderExpensesBreakdownChart() {
             ...chartDefaults.plugins.legend.labels,
             color: themeColors.textColor,
             usePointStyle: true,
-            pointStyle: 'circle'
+            pointStyle: 'circle',
+            font: { family: 'Inter', size: 11 },
+            padding: 12,
+            generateLabels: getExpensesLegendLabels
           }
         },
         tooltip: {
@@ -569,7 +595,14 @@ function renderExpensesBreakdownChart() {
 
 function renderTopCompaniesChart() {
   const breakdown = getIncomesByCompanyForMonth(currentYear, currentMonth);
-  const top = breakdown.slice(0, 10);
+  const top = breakdown.slice(0, 8);
+
+  // Group remaining into "Otras" if more than 8
+  const remaining = breakdown.slice(8);
+  if (remaining.length > 0) {
+    const otherTotal = remaining.reduce((s, [, v]) => s + v, 0);
+    top.push(['Otras', otherTotal]);
+  }
 
   const labels = top.map(([name]) => name);
   const data = top.map(([, value]) => value);
@@ -578,67 +611,96 @@ function renderTopCompaniesChart() {
   const ctx = document.getElementById('chart-top-companies');
   const themeColors = getChartColors();
 
-  if (chartTopCompanies) {
+  const getTooltipLabel = (ctx) => {
+    const total = ctx.dataset.data.reduce((s, v) => s + (Number(v) || 0), 0);
+    const pct = total > 0 ? ((ctx.raw / total) * 100).toFixed(1) : '0.0';
+    return ` ${ctx.label}: ${formatCurrency(ctx.raw)} (${pct}%)`;
+  };
+
+  const getCompanyLegendLabels = (chart) => {
+    const chartData = chart.data;
+    if (chartData.labels.length && chartData.datasets.length) {
+      const dataset = chartData.datasets[0];
+      const total = dataset.data.reduce((acc, val) => acc + (Number(val) || 0), 0);
+      return chartData.labels.map((label, i) => {
+        const val = Number(dataset.data[i]) || 0;
+        const pct = total > 0 ? ((val / total) * 100).toFixed(1) : '0.0';
+        return {
+          text: `${label} (${pct}%)`,
+          fillStyle: dataset.backgroundColor[i] || '#ccc',
+          strokeStyle: themeColors.doughnutBorder,
+          lineWidth: 1,
+          pointStyle: 'circle',
+          hidden: isNaN(dataset.data[i]) || chart.getDatasetMeta(0).data[i]?.hidden,
+          index: i
+        };
+      });
+    }
+    return [];
+  };
+
+  if (chartTopCompanies && chartTopCompanies.config.type === 'doughnut') {
     chartTopCompanies.data.labels = labels;
     chartTopCompanies.data.datasets[0].data = data;
     chartTopCompanies.data.datasets[0].backgroundColor = colors;
+    chartTopCompanies.data.datasets[0].borderColor = themeColors.doughnutBorder;
     
     chartTopCompanies.options.plugins.legend.labels.color = themeColors.textColor;
+    chartTopCompanies.options.plugins.legend.labels.generateLabels = getCompanyLegendLabels;
     chartTopCompanies.options.plugins.tooltip.backgroundColor = themeColors.tooltipBg;
     chartTopCompanies.options.plugins.tooltip.titleColor = themeColors.tooltipTitle;
     chartTopCompanies.options.plugins.tooltip.bodyColor = themeColors.tooltipBody;
     chartTopCompanies.options.plugins.tooltip.borderColor = themeColors.tooltipBorder;
-    chartTopCompanies.options.scales.x.grid.color = themeColors.gridColor;
-    chartTopCompanies.options.scales.x.ticks.color = themeColors.textColor;
-    chartTopCompanies.options.scales.y.ticks.color = themeColors.textColor;
+    chartTopCompanies.options.plugins.tooltip.callbacks.label = getTooltipLabel;
     
     chartTopCompanies.update();
     return;
   }
 
+  if (chartTopCompanies) {
+    chartTopCompanies.destroy();
+    chartTopCompanies = null;
+  }
+
   chartTopCompanies = new Chart(ctx, {
-    type: 'bar',
+    type: 'doughnut',
     data: {
       labels,
       datasets: [{
-        label: 'Ingresos',
         data,
-        backgroundColor: colors.map(c => c + 'CC'),
-        borderColor: colors,
-        borderWidth: 1,
-        borderRadius: 6,
-        borderSkipped: false
+        backgroundColor: colors,
+        borderColor: themeColors.doughnutBorder,
+        borderWidth: 2,
+        hoverOffset: 8
       }]
     },
     options: {
       ...chartDefaults,
-      indexAxis: 'y',
-      scales: {
-        x: {
-          grid: { color: themeColors.gridColor },
-          ticks: {
-            color: themeColors.textColor,
-            font: { family: 'Inter', size: 11 },
-            callback: (v) => `$${v}`
-          }
-        },
-        y: {
-          grid: { display: false },
-          ticks: {
-            color: themeColors.textColor,
-            font: { family: 'Inter', size: 11 }
-          }
-        }
-      },
+      cutout: '65%',
       plugins: {
         ...chartDefaults.plugins,
-        legend: { display: false },
+        legend: {
+          ...chartDefaults.plugins.legend,
+          position: 'right',
+          labels: {
+            ...chartDefaults.plugins.legend.labels,
+            color: themeColors.textColor,
+            usePointStyle: true,
+            pointStyle: 'circle',
+            font: { family: 'Inter', size: 11 },
+            padding: 12,
+            generateLabels: getCompanyLegendLabels
+          }
+        },
         tooltip: {
           ...chartDefaults.plugins.tooltip,
           backgroundColor: themeColors.tooltipBg,
           titleColor: themeColors.tooltipTitle,
           bodyColor: themeColors.tooltipBody,
-          borderColor: themeColors.tooltipBorder
+          borderColor: themeColors.tooltipBorder,
+          callbacks: {
+            label: getTooltipLabel
+          }
         }
       }
     }
@@ -713,6 +775,28 @@ function renderCommissionsDestinatarioChart() {
     return ` ${ctx.label}: ${formatCurrency(ctx.raw)} (${pct}%)`;
   };
   
+  const getCommissionsLegendLabels = (chart) => {
+    const chartData = chart.data;
+    if (chartData.labels.length && chartData.datasets.length) {
+      const dataset = chartData.datasets[0];
+      const total = dataset.data.reduce((acc, val) => acc + (Number(val) || 0), 0);
+      return chartData.labels.map((label, i) => {
+        const val = Number(dataset.data[i]) || 0;
+        const pct = total > 0 ? ((val / total) * 100).toFixed(1) : '0.0';
+        return {
+          text: `${label} (${pct}%)`,
+          fillStyle: dataset.backgroundColor[i] || '#ccc',
+          strokeStyle: themeColors.doughnutBorder,
+          lineWidth: 1,
+          pointStyle: 'circle',
+          hidden: isNaN(dataset.data[i]) || chart.getDatasetMeta(0).data[i]?.hidden,
+          index: i
+        };
+      });
+    }
+    return [];
+  };
+
   if (chartCommissionsDestinatario) {
     chartCommissionsDestinatario.data.labels = labels;
     chartCommissionsDestinatario.data.datasets[0].data = data;
@@ -720,6 +804,7 @@ function renderCommissionsDestinatarioChart() {
     chartCommissionsDestinatario.data.datasets[0].borderColor = themeColors.doughnutBorder;
     
     chartCommissionsDestinatario.options.plugins.legend.labels.color = themeColors.textColor;
+    chartCommissionsDestinatario.options.plugins.legend.labels.generateLabels = getCommissionsLegendLabels;
     chartCommissionsDestinatario.options.plugins.tooltip.backgroundColor = themeColors.tooltipBg;
     chartCommissionsDestinatario.options.plugins.tooltip.titleColor = themeColors.tooltipTitle;
     chartCommissionsDestinatario.options.plugins.tooltip.bodyColor = themeColors.tooltipBody;
@@ -753,7 +838,10 @@ function renderCommissionsDestinatarioChart() {
             ...chartDefaults.plugins.legend.labels,
             color: themeColors.textColor,
             usePointStyle: true,
-            pointStyle: 'circle'
+            pointStyle: 'circle',
+            font: { family: 'Inter', size: 11 },
+            padding: 12,
+            generateLabels: getCommissionsLegendLabels
           }
         },
         tooltip: {
