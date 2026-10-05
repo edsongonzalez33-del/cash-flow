@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="description" content="Flujo de Caja - Versión optimizada para móviles" />
+  <meta name="theme-color" content="#04060f" />
+  <title>Flujo Caja Móvil</title>
+
+  <!-- PWA Manifest & Service Worker -->
+  <link rel="manifest" href="/cash-flow/manifest.json" />
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/cash-flow/sw.js')
+          .then(reg => console.log('SW Móvil registrado:', reg.scope))
+          .catch(err => console.error('Error SW Móvil:', err));
+      });
+    }
+  </script>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script type="module" crossorigin src="/cash-flow/assets/mobile-oGA9Qv6A.js"></script>
+  <link rel="modulepreload" crossorigin href="/cash-flow/assets/auth-pdIaInSA.js">
+  <link rel="stylesheet" crossorigin href="/cash-flow/assets/mobile-CqdPNfXC.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- ===================== HEADER ===================== -->
+    <header class="app-header">
+      <div class="header-brand">
+        <div class="brand-icon">
+          <img src="icon-192.png" alt="Logo Flujo Caja" style="width: 100%; height: 100%; object-fit: cover; border-radius: inherit;" />
+        </div>
+        <div class="brand-title">
+          <h2>Flujo Caja</h2>
+        </div>
+      </div>
+      <div class="header-actions">
+        <span style="font-size: 0.7rem; color: var(--text-secondary); font-weight: bold; margin-right: 4px;">v20</span>
+        <button class="btn-config" id="btn-config" aria-label="Configuración">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+        </button>
+        <button class="btn-logout" id="btn-logout" aria-label="Cerrar sesión">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+            <polyline points="16 17 21 12 16 7"></polyline>
+            <line x1="21" y1="12" x2="9" y2="12"></line>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- ===================== TICKER RECORDATORIOS ===================== -->
+    <section class="ticker-section" id="ticker-section">
+      <div class="ticker-wrapper">
+        <div class="ticker-title">ALERTAS</div>
+        <div class="ticker-content" id="ticker-content">
+          <div class="ticker-scroll" id="ticker-scroll">Cargando alertas de gastos fijos...</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== CONTROLES SUPERIORES (MES Y ACCIONES) ===================== -->
+    <section class="top-controls-section" style="justify-content: center;">
+      <!-- Selector de Mes (Centro) -->
+      <div class="month-selector">
+        <button class="btn-month-nav" id="mobile-prev-month" aria-label="Mes anterior">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
+        </button>
+        <span class="month-label" id="mobile-month-label">Junio 2026</span>
+        <button class="btn-month-nav" id="mobile-next-month" aria-label="Mes siguiente">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </button>
+      </div>
+    </section>
+
+    <!-- ===================== KEY KPIs ===================== -->
+    <section class="kpis-section">
+      <div class="kpi-card kpi-balance">
+        <span class="kpi-label">Saldo Neto del Mes</span>
+        <span class="kpi-value" id="kpi-balance">$0.00</span>
+      </div>
+      <div class="kpi-row">
+        <div class="kpi-card kpi-income">
+          <span class="kpi-label">Ingresos</span>
+          <span class="kpi-value" id="kpi-income">$0.00</span>
+        </div>
+        <div class="kpi-card kpi-expense">
+          <span class="kpi-label">Gastos</span>
+          <span class="kpi-value" id="kpi-expense">$0.00</span>
+        </div>
+      </div>
+      <div class="kpi-card kpi-commissions" id="kpi-commissions-card" style="display: none;">
+        <span class="kpi-label">Comisiones Pendientes</span>
+        <span class="kpi-value" id="kpi-commissions">$0.00</span>
+      </div>
+    </section>
+
+    <!-- ===================== RECENT TRANSACTIONS ===================== -->
+    <section class="transactions-section">
+      <div class="section-title-row">
+        <h3>Transacciones del Mes</h3>
+        <span class="transaction-count" id="trans-count">0 items</span>
+      </div>
+
+      <div class="transactions-list" id="transactions-list">
+        <!-- Rendered dynamically -->
+        <div class="loading-state">Cargando transacciones...</div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ===================== MODAL FORM (ADD/EDIT) ===================== -->
+  <div class="modal-overlay" id="modal-overlay">
+    <div class="modal-bottom-sheet" id="modal-sheet">
+      <div class="modal-drag-indicator"></div>
+      <div class="modal-header">
+        <h3 id="modal-title">Nuevo Registro</h3>
+        <button class="btn-close-modal" id="modal-close" aria-label="Cerrar">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <form id="modal-form" class="modal-form">
+        <!-- Hidden input for type -->
+        <input type="hidden" id="field-type" value="income" />
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label for="field-date">Fecha</label>
+            <input type="date" id="field-date" required />
+          </div>
+          <div class="form-group">
+            <label for="field-amount">Monto ($)</label>
+            <input type="number" id="field-amount" step="0.01" min="0" placeholder="0.00" inputmode="decimal" required />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="field-exchange-rate">Tasa Cambio BCV (Bs./$)</label>
+            <input type="number" id="field-exchange-rate" step="0.01" min="0" placeholder="Ej: 45.50" inputmode="decimal" />
+          </div>
+          <div class="form-group">
+            <label for="field-amount-bs">Monto Bolívares (Bs.)</label>
+            <input type="number" id="field-amount-bs" step="0.01" min="0" placeholder="0.00" readonly class="readonly-input" />
+          </div>
+        </div>
+
+        <!-- Concept/Company field label will change dynamically -->
+        <div class="form-group">
+          <label for="field-concept" id="label-concept">Compañía / Origen</label>
+          <input type="text" id="field-concept" required placeholder="Ej: Oceánica, Mercantil..." />
+        </div>
+
+        <!-- Expenses specific type field (gasto fijo vs variable) -->
+        <div class="form-group" id="group-expense-type" style="display: none;">
+          <label for="field-expense-type">Tipo de Gasto</label>
+          <select id="field-expense-type" class="form-select">
+          <option value="fijo" selected>Fijo</option>
+          <option value="variable">Variable</option>
+          </select>
+        </div>
+
+        <!-- Incomes specific commission panel -->
+        <div class="commission-panel-toggle" id="group-commission-toggle">
+          <label class="checkbox-container">
+            <input type="checkbox" id="field-commission-active" />
+            <span>¿Aplica comisión a terceros?</span>
+          </label>
+        </div>
+
+        <div class="commission-panel" id="commission-panel" style="display: none;">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="field-commission-recipient">Beneficiario</label>
+              <select id="field-commission-recipient" class="form-select">
+                <option value="">Selecciona beneficiario</option>
+                <option value="María Hortencia">María Hortencia</option>
+                <option value="Luisa Velásquez">Luisa Velásquez</option>
+                <option value="Freddy">Freddy</option>
+                <option value="Zitiu">Zitiu</option>
+                <option value="Esmyll León">Esmyll León</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="field-commission-status">Estado</label>
+              <select id="field-commission-status" class="form-select">
+                <option value="pendiente" selected>Pendiente</option>
+                <option value="pagado">Pagado</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="field-commission-pct">Comisión %</label>
+              <input type="number" id="field-commission-pct" step="0.01" min="0" max="100" placeholder="Ej: 10" inputmode="decimal" />
+            </div>
+            <div class="form-group">
+              <label for="field-commission-amount">Monto Comisión ($)</label>
+              <input type="number" id="field-commission-amount" step="0.01" min="0" placeholder="0.00" inputmode="decimal" />
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="field-notes">Observaciones</label>
+          <textarea id="field-notes" placeholder="Notas opcionales o cálculo automático"></textarea>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn-cancel" id="modal-cancel">Cancelar</button>
+          <button type="submit" class="btn-submit" id="modal-submit">Guardar Registro</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ===================== CONFIRM DELETE MODAL ===================== -->
+  <div class="modal-overlay modal-confirm-overlay" id="confirm-overlay">
+    <div class="modal-confirm">
+      <h3>¿Eliminar registro?</h3>
+      <p>Esta acción es permanente y se actualizará en la nube de Supabase.</p>
+      <div class="confirm-actions">
+        <button class="btn-cancel" id="confirm-cancel">Cancelar</button>
+        <button class="btn-danger" id="confirm-delete">Eliminar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== CONFIG / REMINDERS MODAL ===================== -->
+  <div class="modal-overlay" id="config-overlay">
+    <div class="modal-bottom-sheet" id="config-sheet" style="max-height: 90vh; background: rgba(13, 17, 29, 0.95); border: 1px solid rgba(168, 85, 247, 0.35); position: relative; padding: 24px 20px;">
+      <!-- Botón de Cerrar X en la esquina superior derecha -->
+      <button class="btn-close-modal" id="config-close" aria-label="Cerrar" style="position: absolute; top: 16px; right: 16px; color: #c084fc; z-index: 10;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+
+      <div class="config-modal-body" style="display: flex; flex-direction: column; gap: 20px;">
+        <!-- Form to Add/Edit Reminder -->
+        <form id="reminder-form" class="cyber-form">
+          <h2 class="cyber-title">NUEVO RECORDATORIO<br>MENSUAL</h2>
+          <p class="cyber-subtitle">Configura un gasto fijo recurrente.</p>
+          
+          <div class="form-group cyber-group">
+            <label for="field-reminder-concept">Gasto Fijo / Concepto</label>
+            <div class="cyber-input-wrapper">
+              <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="7" r="4"></circle>
+                <path d="M5.5 21a8.5 8.5 0 0 1 13 0"></path>
+              </svg>
+              <input type="text" id="field-reminder-concept" placeholder="Pago Alquiler Hogar" required />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group cyber-group">
+              <label for="field-reminder-day">Día de Pago (1-31)</label>
+              <div class="cyber-input-wrapper">
+                <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                  <line x1="16" y1="2" x2="16" y2="6"></line>
+                  <line x1="8" y1="2" x2="8" y2="6"></line>
+                  <line x1="3" y1="10" x2="21" y2="10"></line>
+                </svg>
+                <input type="number" id="field-reminder-day" min="1" max="31" placeholder="10" required inputmode="numeric" />
+              </div>
+            </div>
+
+            <div class="form-group cyber-group">
+              <label for="field-reminder-amount">Monto Estimado ($)</label>
+              <div class="cyber-input-wrapper">
+                <span class="input-icon-text">$</span>
+                <input type="number" id="field-reminder-amount" min="0" step="0.01" placeholder="1.250,00" inputmode="decimal" />
+              </div>
+            </div>
+          </div>
+
+          <div class="form-row" style="margin-bottom: 4px; align-items: center;">
+            <div class="form-group cyber-group" style="flex: 1.2;">
+              <label for="field-reminder-category">Categoría</label>
+              <div class="cyber-input-wrapper">
+                <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                  <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                </svg>
+                <select id="field-reminder-category" class="cyber-select">
+                  <option value="Vivienda" selected>Vivienda</option>
+                  <option value="Servicios">Servicios</option>
+                  <option value="Suscripciones">Suscripciones</option>
+                  <option value="Educación">Educación</option>
+                  <option value="Otros">Otros</option>
+                </select>
+              </div>
+            </div>
+            
+            <div class="form-group cyber-group" style="flex: 0.8; align-items: flex-end;">
+              <label style="margin-right: 18px; white-space: nowrap;">Recordarme</label>
+              <div style="display: flex; align-items: center; gap: 8px; margin-top: 10px; margin-right: 6px;">
+                <span style="font-size: 0.82rem; font-weight: 600; color: var(--text-secondary);" id="label-toggle-recordar">Sí</span>
+                <label class="cyber-switch">
+                  <input type="checkbox" id="field-reminder-active" checked />
+                  <span class="cyber-switch-slider"></span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <button type="submit" class="btn-cyber-submit">GUARDAR RECORDATORIO</button>
+        </form>
+
+        <!-- Reminders List -->
+        <div class="reminders-list-container">
+          <h4 style="font-size: 0.82rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 12px; letter-spacing: 0.03em;">Recordatorios Activos</h4>
+          <div id="reminders-list" style="display: flex; flex-direction: column; gap: 10px;">
+            <!-- Rendered dynamically -->
+            <div class="empty-state" style="padding: 20px; font-size: 0.8rem;">No tienes recordatorios fijos registrados.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== FAB & ACTION MENU ===================== -->
+  <div class="fab-overlay" id="fab-overlay"></div>
+  <div class="fab-menu" id="fab-menu">
+    <div class="fab-menu-header">
+      <span>¿Qué deseas registrar?</span>
+    </div>
+    
+    <button class="fab-action-card fab-card-income" id="fab-btn-income">
+      <div class="fab-card-icon-wrap income-glow">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19"></line>
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+      </div>
+      <div class="fab-card-info">
+        <span class="fab-card-title text-income">Nuevo Ingreso</span>
+        <span class="fab-card-subtitle">Cobro de póliza, comisión, etc.</span>
+      </div>
+      <div class="fab-card-arrow">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+      </div>
+    </button>
+
+    <button class="fab-action-card fab-card-expense" id="fab-btn-expense">
+      <div class="fab-card-icon-wrap expense-glow">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+      </div>
+      <div class="fab-card-info">
+        <span class="fab-card-title text-expense">Nuevo Gasto</span>
+        <span class="fab-card-subtitle">Pago fijo, compras, servicios...</span>
+      </div>
+      <div class="fab-card-arrow">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+      </div>
+    </button>
+  </div>
+  
+  <button class="fab-main" id="fab-main-toggle" aria-label="Opciones de registro">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="fab-icon-plus" id="fab-icon">
+      <line x1="12" y1="5" x2="12" y2="19"></line>
+      <line x1="5" y1="12" x2="19" y2="12"></line>
+    </svg>
+  </button>
+
+  <!-- Toast system -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- App Logic Entrypoint -->
+</body>
+</html>
