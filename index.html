@@ -29,9 +29,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  <script type="module" crossorigin src="/cash-flow/assets/main-DYhpK5He.js"></script>
-  <link rel="modulepreload" crossorigin href="/cash-flow/assets/auth-pdIaInSA.js">
-  <link rel="stylesheet" crossorigin href="/cash-flow/assets/main-CncRGANg.css">
+  <script type="module" crossorigin src="/cash-flow/assets/main-DUuK0VcZ.js"></script>
+  <link rel="modulepreload" crossorigin href="/cash-flow/assets/auth-C4VOTJWR.js">
+  <link rel="stylesheet" crossorigin href="/cash-flow/assets/main-C3OWG2er.css">
 </head>
 <body>
   <!-- ===================== SIDEBAR ===================== -->
@@ -158,65 +158,209 @@
 
       <!-- KPI Cards -->
       <div class="kpi-grid" id="kpi-grid">
+        <!-- Saldo del Mes -->
         <div class="kpi-card kpi-balance">
-          <div class="kpi-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+          <div class="kpi-header">
+            <div class="kpi-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="2" y="4" width="20" height="16" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+            </div>
+            <span class="kpi-label">Saldo del Mes</span>
           </div>
           <div class="kpi-content">
-            <span class="kpi-label">Saldo del Mes</span>
             <span class="kpi-value" id="kpi-balance">$0.00</span>
+            <div class="kpi-breakdown-list">
+              <div class="kpi-bd-item">
+                <span class="pill-sym sym-usd">$</span>
+                <span class="kpi-bd-val" id="kpi-balance-usd">$0.00</span>
+              </div>
+              <div class="kpi-bd-item">
+                <span class="pill-sym sym-bs">Bs</span>
+                <span class="kpi-bd-val" id="kpi-balance-bs">Bs. 0,00</span>
+              </div>
+            </div>
           </div>
           <div class="kpi-trend" id="kpi-balance-trend"></div>
         </div>
+
+        <!-- Total Ingresos -->
         <div class="kpi-card kpi-income">
-          <div class="kpi-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
+          <div class="kpi-header">
+            <div class="kpi-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
+            </div>
+            <span class="kpi-label">Total Ingresos</span>
           </div>
           <div class="kpi-content">
-            <span class="kpi-label">Total Ingresos</span>
-            <span class="kpi-value" id="kpi-income">$0.00</span>
+            <span class="kpi-value text-success" id="kpi-income">$0.00</span>
+            <div class="kpi-breakdown-list">
+              <div class="kpi-bd-item">
+                <span class="pill-sym sym-usd">$</span>
+                <span class="kpi-bd-val text-success" id="kpi-income-usd">$0.00</span>
+              </div>
+              <div class="kpi-bd-item">
+                <span class="pill-sym sym-bs">Bs</span>
+                <span class="kpi-bd-val" id="kpi-income-bs">Bs. 0,00</span>
+              </div>
+            </div>
           </div>
           <div class="kpi-trend" id="kpi-income-trend"></div>
         </div>
+
+        <!-- Total Gastos -->
         <div class="kpi-card kpi-expense">
-          <div class="kpi-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"></polyline><polyline points="17 18 23 18 23 12"></polyline></svg>
+          <div class="kpi-header">
+            <div class="kpi-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"></polyline><polyline points="17 18 23 18 23 12"></polyline></svg>
+            </div>
+            <span class="kpi-label">Total Gastos</span>
           </div>
           <div class="kpi-content">
-            <span class="kpi-label">Total Gastos</span>
-            <span class="kpi-value" id="kpi-expense">$0.00</span>
+            <span class="kpi-value text-danger" id="kpi-expense">$0.00</span>
+            <div class="kpi-breakdown-list">
+              <div class="kpi-bd-item">
+                <span class="pill-sym sym-usd">$</span>
+                <span class="kpi-bd-val text-danger" id="kpi-expense-usd">$0.00</span>
+              </div>
+              <div class="kpi-bd-item">
+                <span class="pill-sym sym-bs">Bs</span>
+                <span class="kpi-bd-val" id="kpi-expense-bs">Bs. 0,00</span>
+              </div>
+            </div>
           </div>
           <div class="kpi-trend" id="kpi-expense-trend"></div>
         </div>
+
+        <!-- Tasa de Ahorro -->
         <div class="kpi-card kpi-savings">
-          <div class="kpi-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 5c-1.5 0-2.8 1.4-3 2-3.5-1.5-11-.3-11 5 0 1.8 0 3 2 4.5V20h4v-2h3v2h4v-4c1-.5 1.7-1 2-2h2v-4h-2c0-1-.5-1.5-1-2"/><circle cx="16" cy="10" r="1"/></svg>
+          <div class="kpi-header">
+            <div class="kpi-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 5c-1.5 0-2.8 1.4-3 2-3.5-1.5-11-.3-11 5 0 1.8 0 3 2 4.5V20h4v-2h3v2h4v-4c1-.5 1.7-1 2-2h2v-4h-2c0-1-.5-1.5-1-2"/><circle cx="16" cy="10" r="1"/></svg>
+            </div>
+            <span class="kpi-label">Tasa de Ahorro</span>
           </div>
           <div class="kpi-content">
-            <span class="kpi-label">Tasa de Ahorro</span>
             <span class="kpi-value" id="kpi-savings">0%</span>
+            <div class="kpi-breakdown-list">
+              <div class="kpi-bd-item">
+                <span class="pill-sym sym-target">Meta</span>
+                <span class="kpi-bd-val">&ge; 20.0%</span>
+              </div>
+              <div class="kpi-bd-item">
+                <span class="pill-sym sym-usd">Neto</span>
+                <span class="kpi-bd-val" id="kpi-savings-net">$0.00</span>
+              </div>
+            </div>
           </div>
           <div class="kpi-trend" id="kpi-savings-trend"></div>
         </div>
+
+        <!-- Comisiones Pendientes -->
         <div class="kpi-card kpi-commissions">
-          <div class="kpi-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-              <circle cx="9" cy="7" r="4"></circle>
-              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-            </svg>
+          <div class="kpi-header">
+            <div class="kpi-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+              </svg>
+            </div>
+            <span class="kpi-label">Comisiones Pendientes</span>
           </div>
           <div class="kpi-content">
-            <span class="kpi-label">Comisiones Pendientes</span>
-            <span class="kpi-value" id="kpi-commissions">$0.00</span>
+            <span class="kpi-value" id="kpi-commissions" style="color: #A855F7;">$0.00</span>
+            <div class="kpi-breakdown-list">
+              <div class="kpi-bd-item">
+                <span class="pill-sym sym-pending">Pend</span>
+                <span class="kpi-bd-val" id="kpi-commissions-bs">Bs. 0,00</span>
+              </div>
+              <div class="kpi-bd-item">
+                <span class="pill-sym sym-usd">Pagos</span>
+                <span class="kpi-bd-val" id="kpi-commissions-count">0 ítems</span>
+              </div>
+            </div>
           </div>
           <div class="kpi-trend" id="kpi-commissions-trend">Pendientes de pago</div>
         </div>
       </div>
 
+      <!-- Meta y Proyección de Cierre Anual (Between Top KPIs and Ingresos vs Gastos) -->
+      <div class="charts-grid" style="margin-top: 20px;">
+        <div class="chart-card chart-wide projection-card" style="grid-column: span 2; padding: 22px 24px;">
+          <!-- Header -->
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 18px;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <div style="width: 42px; height: 42px; border-radius: var(--radius-md); background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(59, 130, 246, 0.2)); border: 1px solid rgba(16, 185, 129, 0.35); display: flex; align-items: center; justify-content: center; font-size: 1.3rem; flex-shrink: 0;">
+                🎯
+              </div>
+              <div>
+                <h3 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
+                  Meta y Proyección de Cierre Anual
+                  <span class="type-badge" style="background: rgba(16, 185, 129, 0.14); color: #10B981; font-weight: 600; font-size: 0.72rem; text-transform: none;">Año 2026</span>
+                </h3>
+                <p style="margin: 3px 0 0; font-size: 0.8rem; color: var(--text-muted);" id="projection-subtitle">
+                  Objetivo: Superar récord histórico de 2025 con proyección de cierre a Diciembre
+                </p>
+              </div>
+            </div>
+            <div id="projection-status-badge"></div>
+          </div>
+
+          <!-- 4 KPI Metrics Grid -->
+          <div class="projection-metrics-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px;">
+            <div class="proj-metric-item" style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 12px 14px;">
+              <span style="font-size: 0.72rem; text-transform: uppercase; color: var(--text-muted); font-weight: 600; letter-spacing: 0.04em;">Ventas Acumuladas YTD</span>
+              <div style="font-size: 1.35rem; font-weight: 800; color: var(--text-primary); margin-top: 4px; font-variant-numeric: tabular-nums;" id="proj-current-sales">$0.00</div>
+              <span style="font-size: 0.72rem; color: var(--text-muted);" id="proj-current-sub">Acumulado en curso</span>
+            </div>
+
+            <div class="proj-metric-item" style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 12px 14px;">
+              <span style="font-size: 0.72rem; text-transform: uppercase; color: var(--text-muted); font-weight: 600; letter-spacing: 0.04em;">Meta Objetivo 2026</span>
+              <div style="font-size: 1.35rem; font-weight: 800; color: #3B82F6; margin-top: 4px; font-variant-numeric: tabular-nums;" id="proj-target-goal">$0.00</div>
+              <span style="font-size: 0.72rem; color: var(--text-muted);" id="proj-target-sub">+10% vs 2025</span>
+            </div>
+
+            <div class="proj-metric-item" style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 12px 14px;">
+              <span style="font-size: 0.72rem; text-transform: uppercase; color: var(--text-muted); font-weight: 600; letter-spacing: 0.04em;">Proyección a Diciembre</span>
+              <div style="font-size: 1.35rem; font-weight: 800; color: #10B981; margin-top: 4px; font-variant-numeric: tabular-nums;" id="proj-forecast-val">$0.00</div>
+              <span style="font-size: 0.72rem; color: #10B981; font-weight: 600;" id="proj-forecast-sub">+0.0% vs 2025</span>
+            </div>
+
+            <div class="proj-metric-item" style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 12px 14px;">
+              <span style="font-size: 0.72rem; text-transform: uppercase; color: var(--text-muted); font-weight: 600; letter-spacing: 0.04em;">Faltante para la Meta</span>
+              <div style="font-size: 1.35rem; font-weight: 800; color: #F59E0B; margin-top: 4px; font-variant-numeric: tabular-nums;" id="proj-gap-val">$0.00</div>
+              <span style="font-size: 0.72rem; color: var(--text-muted);" id="proj-gap-sub">Para alcanzar objetivo</span>
+            </div>
+          </div>
+
+          <!-- Progress Bar Section -->
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.82rem;">
+              <span style="font-weight: 600; color: var(--text-primary);">Cumplimiento de Meta Anual (vs Récord 2025)</span>
+              <strong style="color: #10B981; font-weight: 700; font-size: 0.95rem; font-variant-numeric: tabular-nums;" id="proj-progress-pct">0.0%</strong>
+            </div>
+
+            <!-- Visual Bar -->
+            <div style="width: 100%; height: 14px; background: rgba(255, 255, 255, 0.06); border-radius: 20px; overflow: hidden; position: relative; border: 1px solid rgba(255, 255, 255, 0.08);">
+              <div id="proj-progress-bar-fill" style="height: 100%; width: 0%; background: linear-gradient(90deg, #F59E0B 0%, #3B82F6 40%, #10B981 100%); border-radius: 20px; transition: width 1s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 0 12px rgba(16, 185, 129, 0.4);"></div>
+            </div>
+
+            <!-- Scale Indicators below bar -->
+            <div style="display: flex; justify-content: space-between; font-size: 0.72rem; color: var(--text-muted); margin-top: 2px;">
+              <span>$0 (Inicio 2026)</span>
+              <span id="proj-scale-2024">2024: $0.00</span>
+              <span id="proj-scale-2025" style="color: #3B82F6; font-weight: 600;">Récord 2025: $0.00 (100%)</span>
+              <span id="proj-scale-goal" style="color: #10B981; font-weight: 700;">Meta +10%</span>
+            </div>
+          </div>
+
+          <!-- Motivational Diagnosis Banner -->
+          <div id="proj-diagnosis-banner" style="margin-top: 16px; padding: 10px 14px; border-radius: var(--radius-sm); background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.2); font-size: 0.82rem; color: var(--text-primary); display: flex; align-items: center; gap: 8px;"></div>
+        </div>
+      </div>
+
       <!-- Charts Row: Ingresos vs Gastos (Full Width) -->
-      <div class="charts-grid">
+      <div class="charts-grid" style="margin-top: 20px;">
         <div class="chart-card chart-wide" style="grid-column: span 2;">
           <div class="chart-header">
             <h3>Ingresos vs Gastos</h3>
@@ -285,10 +429,13 @@
         <div class="chart-card">
           <div class="chart-header">
             <h3>Distribución de Comisiones Pagadas</h3>
-            <span class="chart-period">Por Beneficiario</span>
+            <span class="chart-period" id="chart-commissions-period">Mayo 2026</span>
           </div>
-          <div class="chart-body" style="min-height: 250px;">
+          <div class="chart-body" id="chart-commissions-destinatario-container" style="min-height: 250px; display: flex; flex-direction: column; justify-content: center;">
             <canvas id="chart-commissions-destinatario"></canvas>
+            <div id="chart-commissions-empty" class="empty-state" style="display: none; padding: 40px 20px; width: 100%;">
+              No hay comisiones pagadas este mes
+            </div>
           </div>
         </div>
         <div class="chart-card">
@@ -315,6 +462,25 @@
           </div>
           <div class="chart-body" style="min-height: 280px;">
             <canvas id="chart-performance-compare"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sixth Row: Comparativa de Ventas Trimestrales (2024 - 2025 - 2026) -->
+      <div class="charts-grid" style="margin-top: 20px;">
+        <div class="chart-card chart-wide" style="grid-column: span 2;">
+          <div class="chart-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+            <div>
+              <h3 style="margin-bottom: 4px; font-size: 1rem; display: flex; align-items: center; gap: 8px;">
+                <span>Comparativa de Ventas Trimestrales</span>
+                <span class="type-badge" style="background: rgba(99, 102, 241, 0.12); color: #818CF8; font-size: 0.75rem; text-transform: none; font-weight: 600;">2024 vs 2025 vs 2026</span>
+              </h3>
+              <div id="quarterly-sales-totals" style="font-size: 0.82rem; color: var(--text-muted); display: flex; gap: 12px; flex-wrap: wrap; margin-top: 4px;"></div>
+            </div>
+            <span class="chart-period">Ventas por Trimestre (Q1 - Q4)</span>
+          </div>
+          <div class="chart-body" style="min-height: 290px;">
+            <canvas id="chart-quarterly-sales"></canvas>
           </div>
         </div>
       </div>
