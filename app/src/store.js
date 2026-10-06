@@ -1079,19 +1079,25 @@ export async function deleteIncome(year, month, id) {
 export function getPendingCommissions() {
   const store = getStore();
   let total = 0;
+  let totalBs = 0;
   const list = [];
   for (const [monthKey, incomesList] of Object.entries(store.incomes)) {
     for (const income of incomesList) {
       if (income.commissionActive && income.commissionStatus === 'pendiente') {
         const amt = parseFloat(income.commissionAmount || 0);
+        const rate = parseFloat(income.exchangeRate || 0);
+        const amtBs = rate > 0 ? (amt * rate) : 0;
         total += amt;
+        totalBs += amtBs;
         list.push({
           id: income.id,
           monthKey: monthKey,
           date: income.date,
           company: income.company,
           recipient: income.commissionRecipient,
-          amount: amt
+          amount: amt,
+          amountBs: amtBs,
+          exchangeRate: rate
         });
       }
     }
@@ -1099,26 +1105,39 @@ export function getPendingCommissions() {
   list.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
   return {
     total,
+    totalBs,
     list
   };
 }
 
-export function getPaidCommissions() {
+export function getPaidCommissions(year = null, month = null) {
   const store = getStore();
   let total = 0;
+  let totalBs = 0;
   const list = [];
-  for (const [monthKey, incomesList] of Object.entries(store.incomes)) {
+
+  const targetKey = (year !== null && month !== null) ? monthKey(year, month) : null;
+  const entries = targetKey 
+    ? (store.incomes[targetKey] ? [[targetKey, store.incomes[targetKey]]] : [])
+    : Object.entries(store.incomes);
+
+  for (const [mKey, incomesList] of entries) {
     for (const income of incomesList) {
       if (income.commissionActive && income.commissionStatus === 'pagado') {
         const amt = parseFloat(income.commissionAmount || 0);
+        const rate = parseFloat(income.exchangeRate || 0);
+        const amtBs = rate > 0 ? (amt * rate) : 0;
         total += amt;
+        totalBs += amtBs;
         list.push({
           id: income.id,
-          monthKey: monthKey,
+          monthKey: mKey,
           date: income.date,
           company: income.company,
           recipient: income.commissionRecipient,
-          amount: amt
+          amount: amt,
+          amountBs: amtBs,
+          exchangeRate: rate
         });
       }
     }
@@ -1126,6 +1145,7 @@ export function getPaidCommissions() {
   list.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
   return {
     total,
+    totalBs,
     list
   };
 }
@@ -1193,21 +1213,142 @@ export function getMonthTotals(year, month) {
   const expenses = getExpenses(year, month);
   const incomes = getIncomes(year, month);
 
-  const totalExpenses = expenses.reduce((s, e) => s + (e.amount || 0), 0);
-  const totalIncomes = incomes.reduce((s, e) => s + (e.amount || 0), 0);
+  // Incomes breakdown: distinguish direct USD vs direct Bs
+  let directIncomesUsd = 0;
+  let directIncomesBs = 0;
+  let totalIncomes = 0; // Total equivalente en USD
+
+  for (const inc of incomes) {
+    const amtUsd = parseFloat(inc.amount || 0);
+    const amtBs = parseFloat(inc.amountBs || 0);
+    totalIncomes += amtUsd;
+    
+    if (amtBs > 0) {
+      directIncomesBs += amtBs;
+    } else {
+      directIncomesUsd += amtUsd;
+    }
+  }
+
+  // Expenses breakdown: distinguish direct USD vs direct Bs
+  let directExpensesUsd = 0;
+  let directExpensesBs = 0;
+  let totalExpenses = 0; // Total equivalente en USD
+
+  for (const exp of expenses) {
+    const amtUsd = parseFloat(exp.amount || 0);
+    const amtBs = parseFloat(exp.amountBs || 0);
+    totalExpenses += amtUsd;
+    
+    if (amtBs > 0) {
+      directExpensesBs += amtBs;
+    } else {
+      directExpensesUsd += amtUsd;
+    }
+  }
+
+  // Balance breakdown
+  const directBalanceUsd = directIncomesUsd - directExpensesUsd;
+  const directBalanceBs = directIncomesBs - directExpensesBs;
+  const balance = totalIncomes - totalExpenses;
+
   const fixedExpenses = expenses.filter(e => (e.type || '').toLowerCase() === 'fijo')
     .reduce((s, e) => s + (e.amount || 0), 0);
   const variableExpenses = expenses.filter(e => (e.type || '').toLowerCase() === 'variable')
     .reduce((s, e) => s + (e.amount || 0), 0);
 
   return {
-    totalExpenses,
     totalIncomes,
+    directIncomesUsd,
+    directIncomesBs,
+    totalExpenses,
+    directExpensesUsd,
+    directExpensesBs,
+    balance,
+    directBalanceUsd,
+    directBalanceBs,
     fixedExpenses,
     variableExpenses,
-    balance: totalIncomes - totalExpenses,
     expenseCount: expenses.length,
     incomeCount: incomes.length
+  };
+}
+
+export function getQuarterlySales(years = [2024, 2025, 2026]) {
+  const store = getStore();
+  const result = {};
+
+  for (const year of years) {
+    result[year] = {
+      q1: 0,
+      q2: 0,
+      q3: 0,
+      q4: 0,
+      total: 0
+    };
+
+    for (let m = 1; m <= 12; m++) {
+      const key = monthKey(year, m);
+      const incomes = store.incomes[key] || [];
+      const monthTotal = incomes.reduce((sum, inc) => sum + (parseFloat(inc.amount) || 0), 0);
+
+      if (m >= 1 && m <= 3) result[year].q1 += monthTotal;
+      else if (m >= 4 && m <= 6) result[year].q2 += monthTotal;
+      else if (m >= 7 && m <= 9) result[year].q3 += monthTotal;
+      else if (m >= 10 && m <= 12) result[year].q4 += monthTotal;
+
+      result[year].total += monthTotal;
+    }
+  }
+
+  return result;
+}
+
+export function getSalesProjection(year = 2026, month = 10) {
+  const qData = getQuarterlySales([2024, 2025, 2026]);
+
+  const total2024 = qData[2024]?.total || 0;
+  const total2025 = qData[2025]?.total || 0;
+  const total2026YTD = qData[2026]?.total || 0;
+
+  // Base target is beating previous year (2025); stretch goal is +10%
+  const targetBase = total2025 > 0 ? total2025 : (total2024 > 0 ? total2024 * 1.15 : 50000);
+  const targetStretch = targetBase * 1.10; // +10% growth goal
+
+  // Number of elapsed months up to current month (e.g. October = 10 months)
+  const elapsedMonths = Math.max(1, Math.min(12, month));
+  const avgMonthlyYTD = elapsedMonths > 0 ? (total2026YTD / elapsedMonths) : 0;
+
+  // Forecast projection to end of year:
+  // Current YTD + (monthly pace * remaining months)
+  const remainingMonths = Math.max(0, 12 - elapsedMonths);
+  const projectedTotal = total2026YTD + (avgMonthlyYTD * remainingMonths);
+
+  const progressBasePct = targetBase > 0 ? ((total2026YTD / targetBase) * 100) : 0;
+  const progressStretchPct = targetStretch > 0 ? ((total2026YTD / targetStretch) * 100) : 0;
+
+  const gapToBase = Math.max(0, targetBase - total2026YTD);
+  const gapToStretch = Math.max(0, targetStretch - total2026YTD);
+
+  const projectedVs2025Pct = total2025 > 0 ? (((projectedTotal - total2025) / total2025) * 100) : 0;
+  const projectedVs2024Pct = total2024 > 0 ? (((projectedTotal - total2024) / total2024) * 100) : 0;
+
+  return {
+    total2024,
+    total2025,
+    total2026YTD,
+    targetBase,
+    targetStretch,
+    projectedTotal,
+    progressBasePct,
+    progressStretchPct,
+    gapToBase,
+    gapToStretch,
+    projectedVs2025Pct,
+    projectedVs2024Pct,
+    elapsedMonths,
+    remainingMonths,
+    avgMonthlyYTD
   };
 }
 

@@ -10,8 +10,8 @@ import {
   getAllCompanies, getAllConcepts, getAllBeneficiaries, getAllConceptsObjects, setupRealtimeSync
 } from './store.js';
 import {
-  formatCurrency, formatDate, formatMonthLabel, navigateMonth,
-  todayISO, monthKey, $, $$, showToast
+  formatCurrency, formatBs, formatDate, formatMonthLabel, navigateMonth,
+  todayISO, monthKey, $, $$, showToast, animateCount
 } from './utils.js';
 
 // ── Reminders & Fix Expenses Store Helper ──
@@ -356,10 +356,24 @@ function renderMobileApp() {
   const incomes = getIncomes(currentYear, currentMonth);
   const expenses = getExpenses(currentYear, currentMonth);
 
-  // Render KPIs
-  $('#kpi-balance').textContent = formatCurrency(totals.balance);
-  $('#kpi-income').textContent = formatCurrency(totals.totalIncomes);
-  $('#kpi-expense').textContent = formatCurrency(totals.totalExpenses);
+  // Render KPIs (Totales consolidados + Desglose en $ y Bs) con animación
+  animateCount($('#kpi-balance'), totals.balance, formatCurrency);
+  const mobBalUsd = $('#kpi-balance-usd');
+  if (mobBalUsd) animateCount(mobBalUsd, totals.directBalanceUsd, formatCurrency);
+  const mobileBalanceBs = $('#kpi-balance-bs');
+  if (mobileBalanceBs) animateCount(mobileBalanceBs, totals.directBalanceBs, formatBs);
+
+  animateCount($('#kpi-income'), totals.totalIncomes, formatCurrency);
+  const mobIncUsd = $('#kpi-income-usd');
+  if (mobIncUsd) animateCount(mobIncUsd, totals.directIncomesUsd, formatCurrency);
+  const mobileIncomeBs = $('#kpi-income-bs');
+  if (mobileIncomeBs) animateCount(mobileIncomeBs, totals.directIncomesBs, formatBs);
+
+  animateCount($('#kpi-expense'), totals.totalExpenses, formatCurrency);
+  const mobExpUsd = $('#kpi-expense-usd');
+  if (mobExpUsd) animateCount(mobExpUsd, totals.directExpensesUsd, formatCurrency);
+  const mobileExpenseBs = $('#kpi-expense-bs');
+  if (mobileExpenseBs) animateCount(mobileExpenseBs, totals.directExpensesBs, formatBs);
 
   // Render Balance Colors dynamically
   const balanceVal = $('#kpi-balance');
@@ -375,7 +389,9 @@ function renderMobileApp() {
   const pendingComms = getPendingCommissions();
   const commsCard = $('#kpi-commissions-card');
   if (pendingComms.total > 0) {
-    $('#kpi-commissions').textContent = formatCurrency(pendingComms.total);
+    animateCount($('#kpi-commissions'), pendingComms.total, formatCurrency);
+    const mobileCommsBs = $('#kpi-commissions-bs');
+    if (mobileCommsBs) animateCount(mobileCommsBs, pendingComms.totalBs, formatBs);
     commsCard.style.display = 'flex';
   } else {
     commsCard.style.display = 'none';

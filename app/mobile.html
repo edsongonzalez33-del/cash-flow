@@ -84,20 +84,56 @@
       <div class="kpi-card kpi-balance">
         <span class="kpi-label">Saldo Neto del Mes</span>
         <span class="kpi-value" id="kpi-balance">$0.00</span>
+        <div class="kpi-breakdown-list">
+          <div class="kpi-bd-item">
+            <span class="pill-sym sym-usd">$</span>
+            <span class="kpi-bd-val" id="kpi-balance-usd">$0.00</span>
+          </div>
+          <div class="kpi-bd-item">
+            <span class="pill-sym sym-bs">Bs</span>
+            <span class="kpi-bd-val" id="kpi-balance-bs">Bs. 0,00</span>
+          </div>
+        </div>
       </div>
       <div class="kpi-row">
         <div class="kpi-card kpi-income">
           <span class="kpi-label">Ingresos</span>
-          <span class="kpi-value" id="kpi-income">$0.00</span>
+          <span class="kpi-value text-success" id="kpi-income" style="color: #34d399;">$0.00</span>
+          <div class="kpi-breakdown-list">
+            <div class="kpi-bd-item">
+              <span class="pill-sym sym-usd">$</span>
+              <span class="kpi-bd-val text-success" id="kpi-income-usd">$0.00</span>
+            </div>
+            <div class="kpi-bd-item">
+              <span class="pill-sym sym-bs">Bs</span>
+              <span class="kpi-bd-val" id="kpi-income-bs">Bs. 0,00</span>
+            </div>
+          </div>
         </div>
         <div class="kpi-card kpi-expense">
           <span class="kpi-label">Gastos</span>
-          <span class="kpi-value" id="kpi-expense">$0.00</span>
+          <span class="kpi-value text-danger" id="kpi-expense" style="color: #fb7185;">$0.00</span>
+          <div class="kpi-breakdown-list">
+            <div class="kpi-bd-item">
+              <span class="pill-sym sym-usd">$</span>
+              <span class="kpi-bd-val text-danger" id="kpi-expense-usd">$0.00</span>
+            </div>
+            <div class="kpi-bd-item">
+              <span class="pill-sym sym-bs">Bs</span>
+              <span class="kpi-bd-val" id="kpi-expense-bs">Bs. 0,00</span>
+            </div>
+          </div>
         </div>
       </div>
       <div class="kpi-card kpi-commissions" id="kpi-commissions-card" style="display: none;">
         <span class="kpi-label">Comisiones Pendientes</span>
-        <span class="kpi-value" id="kpi-commissions">$0.00</span>
+        <span class="kpi-value" id="kpi-commissions" style="color: #a78bfa;">$0.00</span>
+        <div class="kpi-breakdown-list">
+          <div class="kpi-bd-item">
+            <span class="pill-sym sym-pending">Pend</span>
+            <span class="kpi-bd-val" id="kpi-commissions-bs">Bs. 0,00</span>
+          </div>
+        </div>
       </div>
     </section>
 

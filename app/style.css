@@ -490,6 +490,12 @@ h1, h2, h3, h4 {
 .kpi-savings .kpi-icon { background: var(--warning-bg); color: var(--warning); }
 .kpi-commissions .kpi-icon { background: rgba(139, 92, 246, 0.12); color: #A855F7; }
 
+.kpi-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .kpi-content {
   display: flex;
   flex-direction: column;
@@ -499,16 +505,80 @@ h1, h2, h3, h4 {
 .kpi-label {
   font-size: 0.8rem;
   color: var(--text-muted);
-  font-weight: 500;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
 .kpi-value {
-  font-size: 1.65rem;
+  font-size: 1.7rem;
   font-weight: 800;
   letter-spacing: -0.03em;
   color: var(--text-primary);
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+}
+
+.kpi-breakdown-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: 8px;
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: var(--radius-md);
+  min-height: 52px;
+  justify-content: center;
+}
+
+.light-mode .kpi-breakdown-list {
+  background: rgba(15, 23, 42, 0.035);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.kpi-bd-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.78rem;
+  line-height: 1.2;
+}
+
+.pill-sym {
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 1px 5px;
+  border-radius: 4px;
+  letter-spacing: 0.02em;
+  line-height: 1.2;
+}
+
+.pill-sym.sym-usd {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10B981;
+}
+
+.pill-sym.sym-bs {
+  background: rgba(59, 130, 246, 0.15);
+  color: #60A5FA;
+}
+
+.pill-sym.sym-pending {
+  background: rgba(168, 85, 247, 0.15);
+  color: #A855F7;
+}
+
+.pill-sym.sym-target {
+  background: rgba(245, 158, 11, 0.15);
+  color: #F59E0B;
+}
+
+.kpi-bd-val {
+  font-weight: 700;
+  color: var(--text-primary);
+  font-size: 0.8rem;
+  white-space: nowrap;
 }
 
 .kpi-trend {
@@ -517,6 +587,7 @@ h1, h2, h3, h4 {
   display: flex;
   align-items: center;
   gap: 4px;
+  margin-top: 2px;
 }
 
 .kpi-trend.up { color: var(--success); }
@@ -576,6 +647,36 @@ h1, h2, h3, h4 {
   position: relative;
   min-height: 260px;
 }
+
+.projection-card {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.85) 100%);
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+}
+
+.light-mode .projection-card {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(241, 245, 249, 0.9) 100%);
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
+}
+
+.light-mode .proj-metric-item {
+  background: rgba(15, 23, 42, 0.03) !important;
+  border-color: rgba(15, 23, 42, 0.08) !important;
+}
+
+@media (max-width: 900px) {
+  .projection-metrics-grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+}
+
+@media (max-width: 500px) {
+  .projection-metrics-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
 
 /* ============================================================
    SUMMARY CARDS (Expenses / Incomes)

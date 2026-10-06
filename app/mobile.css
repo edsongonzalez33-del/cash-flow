@@ -462,6 +462,7 @@ body {
   font-size: 1.6rem;
   font-weight: 800;
   letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
 }
 
 .kpi-balance .kpi-value {
@@ -482,6 +483,56 @@ body {
 }
 .kpi-commissions .kpi-value {
   color: #a78bfa;
+}
+
+.kpi-breakdown-box {
+  margin-top: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-md);
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.kpi-breakdown-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.72rem;
+}
+
+.kpi-bd-label {
+  color: var(--text-secondary);
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.kpi-bd-value {
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+
+.badge-curr {
+  font-size: 0.6rem;
+  font-weight: 800;
+  padding: 1px 4px;
+  border-radius: 3px;
+  line-height: 1.2;
+}
+
+.badge-curr.tag-usd {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+}
+
+.badge-curr.tag-bs {
+  background: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
 }
 
 /* ===================== TRANSACTIONS ===================== */

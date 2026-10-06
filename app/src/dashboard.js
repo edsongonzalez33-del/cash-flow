@@ -10,12 +10,13 @@ import {
 } from 'chart.js';
 import {
   getMonthTotals, getExpensesByConceptForMonth, getIncomesByCompanyForMonth,
-  getRecentTransactions, getExpenses, getPendingCommissions, payCommission, getPaidCommissions
+  getRecentTransactions, getExpenses, getPendingCommissions, payCommission, getPaidCommissions,
+  getQuarterlySales, getSalesProjection
 } from './store.js';
 import {
-  formatCurrency, formatDate, formatMonthLabel, getMonthNameShort,
+  formatCurrency, formatBs, formatDate, formatMonthLabel, getMonthNameShort,
   navigateMonth, getLastNMonthKeys, parseMonthKey, percentChange, $,
-  CHART_COLORS, showToast
+  CHART_COLORS, showToast, animateCount
 } from './utils.js';
 import { fetchBcvRate } from './bcvService.js';
 
@@ -33,6 +34,7 @@ let chartExpensesBreakdown = null;
 let chartTopCompanies = null;
 let chartCommissionsDestinatario = null;
 let chartPerformanceCompare = null;
+let chartQuarterlySales = null;
 
 let currentYear, currentMonth;
 let onMonthChange = null;
@@ -138,6 +140,8 @@ export function renderDashboard() {
   $('#dash-month-label').textContent = label;
   $('#chart-expense-period').textContent = label;
   $('#chart-company-period').textContent = label;
+  const commsPeriodEl = $('#chart-commissions-period');
+  if (commsPeriodEl) commsPeriodEl.textContent = label;
   $('#performance-compare-period').textContent = label;
 
   renderKPIs();
@@ -148,6 +152,8 @@ export function renderDashboard() {
   renderPendingCommissions();
   renderCommissionsDestinatarioChart();
   renderPerformanceCompareChart();
+  renderSalesProjectionCard();
+  renderQuarterlySalesChart();
 }
 
 function renderKPIs() {
@@ -155,38 +161,56 @@ function renderKPIs() {
   const prev = navigateMonth(currentYear, currentMonth, -1);
   const previous = getMonthTotals(prev.year, prev.month);
 
-  // Balance
-  $('#kpi-balance').textContent = formatCurrency(current.balance);
+  // 1. Balance: Total Consolidado + Desglose ($ / Bs) con animación
+  animateCount($('#kpi-balance'), current.balance, formatCurrency);
+  const balUsdEl = $('#kpi-balance-usd');
+  if (balUsdEl) animateCount(balUsdEl, current.directBalanceUsd, formatCurrency);
+  const balBsEl = $('#kpi-balance-bs');
+  if (balBsEl) animateCount(balBsEl, current.directBalanceBs, formatBs);
   setTrend('#kpi-balance-trend', current.balance, previous.balance);
 
-  // Income
-  $('#kpi-income').textContent = formatCurrency(current.totalIncomes);
+  // 2. Income: Total Consolidado + Desglose ($ / Bs) con animación
+  animateCount($('#kpi-income'), current.totalIncomes, formatCurrency);
+  const incUsdEl = $('#kpi-income-usd');
+  if (incUsdEl) animateCount(incUsdEl, current.directIncomesUsd, formatCurrency);
+  const incBsEl = $('#kpi-income-bs');
+  if (incBsEl) animateCount(incBsEl, current.directIncomesBs, formatBs);
   setTrend('#kpi-income-trend', current.totalIncomes, previous.totalIncomes);
 
-  // Expense
-  $('#kpi-expense').textContent = formatCurrency(current.totalExpenses);
+  // 3. Expense: Total Consolidado + Desglose ($ / Bs) con animación
+  animateCount($('#kpi-expense'), current.totalExpenses, formatCurrency);
+  const expUsdEl = $('#kpi-expense-usd');
+  if (expUsdEl) animateCount(expUsdEl, current.directExpensesUsd, formatCurrency);
+  const expBsEl = $('#kpi-expense-bs');
+  if (expBsEl) animateCount(expBsEl, current.directExpensesBs, formatBs);
   // For expenses, LESS is better - so invert the trend
   setTrend('#kpi-expense-trend', current.totalExpenses, previous.totalExpenses, true);
 
-  // Savings rate
+  // 4. Savings rate con animación
   const savingsRate = current.totalIncomes > 0
     ? ((current.balance / current.totalIncomes) * 100)
     : 0;
-  $('#kpi-savings').textContent = `${savingsRate.toFixed(1)}%`;
+  animateCount($('#kpi-savings'), savingsRate, (v) => `${(v || 0).toFixed(1)}%`);
+  const savingsNetEl = $('#kpi-savings-net');
+  if (savingsNetEl) animateCount(savingsNetEl, current.balance, formatCurrency);
 
   const prevRate = previous.totalIncomes > 0
     ? ((previous.balance / previous.totalIncomes) * 100)
     : 0;
   setTrend('#kpi-savings-trend', savingsRate, prevRate);
 
-  // Pending commissions
+  // 5. Pending commissions con animación
   const pendingData = getPendingCommissions();
-  $('#kpi-commissions').textContent = formatCurrency(pendingData.total);
+  animateCount($('#kpi-commissions'), pendingData.total, formatCurrency);
+  const commsBsEl = $('#kpi-commissions-bs');
+  if (commsBsEl) animateCount(commsBsEl, pendingData.totalBs, formatBs);
+  const commsCountEl = $('#kpi-commissions-count');
+  if (commsCountEl) commsCountEl.textContent = `${pendingData.list.length} ${pendingData.list.length === 1 ? 'ítem' : 'ítems'}`;
 }
 
 function renderPendingCommissions() {
   const isPendingTab = currentCommissionTab === 'pending';
-  const data = isPendingTab ? getPendingCommissions() : getPaidCommissions();
+  const data = isPendingTab ? getPendingCommissions() : getPaidCommissions(currentYear, currentMonth);
   
   // 1. Update the table headers dynamically
   const headerTr = $('#commissions-table-header');
@@ -743,35 +767,47 @@ function escapeHtml(str) {
 }
 
 function renderCommissionsDestinatarioChart() {
-  const paidData = getPaidCommissions();
+  const paidData = getPaidCommissions(currentYear, currentMonth);
+  const canvas = document.getElementById('chart-commissions-destinatario');
+  const emptyEl = document.getElementById('chart-commissions-empty');
   
-  const sums = {
-    'María Hortencia': 0,
-    'Luisa Velásquez': 0,
-    'Freddy': 0,
-    'Zitiu': 0,
-    'Esmyll León': 0
-  };
-  
+  const sums = {};
   for (const item of paidData.list) {
-    const rec = item.recipient;
-    if (sums[rec] !== undefined) {
-      sums[rec] += item.amount;
-    } else if (rec) {
-      sums[rec] = item.amount;
-    }
+    const rec = item.recipient ? item.recipient.trim() : 'Otros';
+    sums[rec] = (sums[rec] || 0) + (item.amount || 0);
   }
   
-  const labels = Object.keys(sums);
-  const data = Object.values(sums);
-  const colors = ['#8B5CF6', '#EC4899', '#3B82F6', '#10B981', '#F59E0B']; // Violet, Pink, Blue, Green, Orange
+  // Filter only beneficiaries who actually received commissions > 0 in this month
+  const activeEntries = Object.entries(sums)
+    .filter(([, val]) => val > 0)
+    .sort((a, b) => b[1] - a[1]);
+
+  const total = activeEntries.reduce((s, [, v]) => s + v, 0);
+
+  if (activeEntries.length === 0 || total === 0) {
+    if (chartCommissionsDestinatario) {
+      chartCommissionsDestinatario.destroy();
+      chartCommissionsDestinatario = null;
+    }
+    if (canvas) canvas.style.display = 'none';
+    if (emptyEl) emptyEl.style.display = 'block';
+    return;
+  }
+
+  if (canvas) canvas.style.display = 'block';
+  if (emptyEl) emptyEl.style.display = 'none';
+
+  const labels = activeEntries.map(([name]) => name);
+  const data = activeEntries.map(([, val]) => val);
+  const palette = ['#8B5CF6', '#EC4899', '#3B82F6', '#10B981', '#F59E0B', '#6366F1', '#14B8A6', '#F43F5E'];
+  const colors = labels.map((_, i) => palette[i % palette.length]);
   
-  const ctx = document.getElementById('chart-commissions-destinatario');
+  const ctx = canvas;
   const themeColors = getChartColors();
   
   const getTooltipLabel = (ctx) => {
-    const total = ctx.dataset.data.reduce((s, v) => s + v, 0);
-    const pct = total > 0 ? ((ctx.raw / total) * 100).toFixed(1) : 0;
+    const sumTotal = ctx.dataset.data.reduce((s, v) => s + v, 0);
+    const pct = sumTotal > 0 ? ((ctx.raw / sumTotal) * 100).toFixed(1) : 0;
     return ` ${ctx.label}: ${formatCurrency(ctx.raw)} (${pct}%)`;
   };
   
@@ -779,10 +815,10 @@ function renderCommissionsDestinatarioChart() {
     const chartData = chart.data;
     if (chartData.labels.length && chartData.datasets.length) {
       const dataset = chartData.datasets[0];
-      const total = dataset.data.reduce((acc, val) => acc + (Number(val) || 0), 0);
+      const sumTotal = dataset.data.reduce((acc, val) => acc + (Number(val) || 0), 0);
       return chartData.labels.map((label, i) => {
         const val = Number(dataset.data[i]) || 0;
-        const pct = total > 0 ? ((val / total) * 100).toFixed(1) : '0.0';
+        const pct = sumTotal > 0 ? ((val / sumTotal) * 100).toFixed(1) : '0.0';
         return {
           text: `${label} (${pct}%)`,
           fillStyle: dataset.backgroundColor[i] || '#ccc',
@@ -809,6 +845,7 @@ function renderCommissionsDestinatarioChart() {
     chartCommissionsDestinatario.options.plugins.tooltip.titleColor = themeColors.tooltipTitle;
     chartCommissionsDestinatario.options.plugins.tooltip.bodyColor = themeColors.tooltipBody;
     chartCommissionsDestinatario.options.plugins.tooltip.borderColor = themeColors.tooltipBorder;
+    chartCommissionsDestinatario.options.plugins.tooltip.callbacks.label = getTooltipLabel;
     
     chartCommissionsDestinatario.update();
     return;
@@ -899,12 +936,18 @@ function renderPerformanceCompareChart() {
   if (chartPerformanceCompare) {
     chartPerformanceCompare.data.datasets[0].label = `Mes Anterior (${prevMonthName})`;
     chartPerformanceCompare.data.datasets[0].data = datasetPrev;
+    chartPerformanceCompare.data.datasets[0].backgroundColor = 'rgba(6, 182, 212, 0.75)'; // Cyan
+    chartPerformanceCompare.data.datasets[0].borderColor = '#06B6D4';
     
     chartPerformanceCompare.data.datasets[1].label = `Año Anterior (${lastYearMonthName})`;
     chartPerformanceCompare.data.datasets[1].data = datasetLastYear;
+    chartPerformanceCompare.data.datasets[1].backgroundColor = 'rgba(139, 92, 246, 0.75)'; // Purple/Violet
+    chartPerformanceCompare.data.datasets[1].borderColor = '#8B5CF6';
     
     chartPerformanceCompare.data.datasets[2].label = `Mes Actual (${currentMonthName})`;
     chartPerformanceCompare.data.datasets[2].data = datasetCurrent;
+    chartPerformanceCompare.data.datasets[2].backgroundColor = 'rgba(16, 185, 129, 0.85)'; // Emerald Green
+    chartPerformanceCompare.data.datasets[2].borderColor = '#10B981';
     
     chartPerformanceCompare.options.plugins.legend.labels.color = themeColors.textColor;
     chartPerformanceCompare.options.plugins.tooltip.backgroundColor = themeColors.tooltipBg;
@@ -927,26 +970,26 @@ function renderPerformanceCompareChart() {
         {
           label: `Mes Anterior (${prevMonthName})`,
           data: datasetPrev,
-          backgroundColor: 'rgba(148, 163, 184, 0.4)', // Slate gray
-          borderColor: '#94A3B8',
-          borderWidth: 1,
-          borderRadius: 4
+          backgroundColor: 'rgba(6, 182, 212, 0.75)', // Vibrant Cyan
+          borderColor: '#06B6D4',
+          borderWidth: 1.5,
+          borderRadius: 6
         },
         {
           label: `Año Anterior (${lastYearMonthName})`,
           data: datasetLastYear,
-          backgroundColor: 'rgba(99, 102, 241, 0.4)', // Indigo accent
-          borderColor: '#6366F1',
-          borderWidth: 1,
-          borderRadius: 4
+          backgroundColor: 'rgba(139, 92, 246, 0.75)', // Vibrant Purple/Violet
+          borderColor: '#8B5CF6',
+          borderWidth: 1.5,
+          borderRadius: 6
         },
         {
           label: `Mes Actual (${currentMonthName})`,
           data: datasetCurrent,
-          backgroundColor: 'rgba(16, 185, 129, 0.7)', // Green highlight
+          backgroundColor: 'rgba(16, 185, 129, 0.85)', // Emerald Green
           borderColor: '#10B981',
-          borderWidth: 1,
-          borderRadius: 4
+          borderWidth: 1.5,
+          borderRadius: 6
         }
       ]
     },
@@ -962,7 +1005,7 @@ function renderPerformanceCompareChart() {
           ticks: {
             color: themeColors.textColor,
             font: { family: 'Inter', size: 11 },
-            callback: (v) => `$${v}`
+            callback: (v) => `$${v.toLocaleString('en-US')}`
           }
         }
       },
@@ -987,3 +1030,274 @@ function renderPerformanceCompareChart() {
     }
   });
 }
+
+function renderQuarterlySalesChart() {
+  const qData = getQuarterlySales([2024, 2025, 2026]);
+
+  const total2024 = qData[2024]?.total || 0;
+  const total2025 = qData[2025]?.total || 0;
+  const total2026 = qData[2026]?.total || 0;
+
+  const totalsContainer = $('#quarterly-sales-totals');
+  if (totalsContainer) {
+    totalsContainer.innerHTML = `
+      <span style="display: inline-flex; align-items: center; gap: 5px;">
+        <span style="display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: #F59E0B; box-shadow: 0 0 6px rgba(245,158,11,0.5);"></span>
+        Total 2024: <strong style="color: #F59E0B; font-weight: 700;">${formatCurrency(total2024)}</strong>
+      </span>
+      <span style="color: var(--border-default);">|</span>
+      <span style="display: inline-flex; align-items: center; gap: 5px;">
+        <span style="display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: #3B82F6; box-shadow: 0 0 6px rgba(59,130,246,0.5);"></span>
+        Total 2025: <strong style="color: #3B82F6; font-weight: 700;">${formatCurrency(total2025)}</strong>
+      </span>
+      <span style="color: var(--border-default);">|</span>
+      <span style="display: inline-flex; align-items: center; gap: 5px;">
+        <span style="display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: #10B981; box-shadow: 0 0 6px rgba(16,185,129,0.5);"></span>
+        Total 2026: <strong style="color: #10B981; font-weight: 700;">${formatCurrency(total2026)}</strong>
+        <small style="color: var(--text-muted); font-size: 0.72rem; margin-left: 2px;">(en curso)</small>
+      </span>
+    `;
+  }
+
+  const labels = ['T1 (Ene - Mar)', 'T2 (Abr - Jun)', 'T3 (Jul - Sep)', 'T4 (Oct - Dic)'];
+  
+  const dataset2024 = [qData[2024].q1, qData[2024].q2, qData[2024].q3, qData[2024].q4];
+  const dataset2025 = [qData[2025].q1, qData[2025].q2, qData[2025].q3, qData[2025].q4];
+  const dataset2026 = [qData[2026].q1, qData[2026].q2, qData[2026].q3, qData[2026].q4];
+
+  const ctx = document.getElementById('chart-quarterly-sales');
+  if (!ctx) return;
+  const themeColors = getChartColors();
+
+  const getQuarterlyTooltipLabel = (ctx) => {
+    const val = ctx.raw || 0;
+    const year = ctx.dataset.label;
+    const qIndex = ctx.dataIndex; // 0 for T1, 1 for T2, etc.
+    let extra = '';
+
+    if (year === 'Año 2025') {
+      const prevVal = dataset2024[qIndex];
+      const change = percentChange(val, prevVal);
+      if (change !== null) {
+        const sign = change >= 0 ? '+' : '';
+        extra = ` (${sign}${change.toFixed(1)}% vs 2024)`;
+      }
+    } else if (year === 'Año 2026') {
+      const prevVal = dataset2025[qIndex];
+      const change = percentChange(val, prevVal);
+      if (change !== null) {
+        const sign = change >= 0 ? '+' : '';
+        extra = ` (${sign}${change.toFixed(1)}% vs 2025)`;
+      }
+    }
+
+    return ` ${year}: ${formatCurrency(val)}${extra}`;
+  };
+
+  if (chartQuarterlySales) {
+    chartQuarterlySales.data.datasets[0].data = dataset2024;
+    chartQuarterlySales.data.datasets[0].backgroundColor = 'rgba(245, 158, 11, 0.8)'; // Warm Amber
+    chartQuarterlySales.data.datasets[0].borderColor = '#F59E0B';
+    
+    chartQuarterlySales.data.datasets[1].data = dataset2025;
+    chartQuarterlySales.data.datasets[1].backgroundColor = 'rgba(59, 130, 246, 0.8)'; // Royal Blue
+    chartQuarterlySales.data.datasets[1].borderColor = '#3B82F6';
+    
+    chartQuarterlySales.data.datasets[2].data = dataset2026;
+    chartQuarterlySales.data.datasets[2].backgroundColor = 'rgba(16, 185, 129, 0.85)'; // Emerald Green
+    chartQuarterlySales.data.datasets[2].borderColor = '#10B981';
+
+    chartQuarterlySales.options.plugins.legend.labels.color = themeColors.textColor;
+    chartQuarterlySales.options.plugins.tooltip.backgroundColor = themeColors.tooltipBg;
+    chartQuarterlySales.options.plugins.tooltip.titleColor = themeColors.tooltipTitle;
+    chartQuarterlySales.options.plugins.tooltip.bodyColor = themeColors.tooltipBody;
+    chartQuarterlySales.options.plugins.tooltip.borderColor = themeColors.tooltipBorder;
+    chartQuarterlySales.options.plugins.tooltip.callbacks.label = getQuarterlyTooltipLabel;
+    chartQuarterlySales.options.scales.x.ticks.color = themeColors.textColor;
+    chartQuarterlySales.options.scales.y.grid.color = themeColors.gridColor;
+    chartQuarterlySales.options.scales.y.ticks.color = themeColors.textColor;
+
+    chartQuarterlySales.update();
+    return;
+  }
+
+  chartQuarterlySales = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Año 2024',
+          data: dataset2024,
+          backgroundColor: 'rgba(245, 158, 11, 0.8)', // Warm Amber Orange
+          borderColor: '#F59E0B',
+          borderWidth: 1.5,
+          borderRadius: 6
+        },
+        {
+          label: 'Año 2025',
+          data: dataset2025,
+          backgroundColor: 'rgba(59, 130, 246, 0.8)', // Royal Electric Blue
+          borderColor: '#3B82F6',
+          borderWidth: 1.5,
+          borderRadius: 6
+        },
+        {
+          label: 'Año 2026',
+          data: dataset2026,
+          backgroundColor: 'rgba(16, 185, 129, 0.85)', // Vivid Emerald Green
+          borderColor: '#10B981',
+          borderWidth: 1.5,
+          borderRadius: 6
+        }
+      ]
+    },
+    options: {
+      ...chartDefaults,
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: { color: themeColors.textColor, font: { family: 'Inter', size: 12, weight: '500' } }
+        },
+        y: {
+          grid: { color: themeColors.gridColor },
+          ticks: {
+            color: themeColors.textColor,
+            font: { family: 'Inter', size: 11 },
+            callback: (v) => `$${v.toLocaleString('en-US')}`
+          }
+        }
+      },
+      plugins: {
+        ...chartDefaults.plugins,
+        legend: {
+          ...chartDefaults.plugins.legend,
+          position: 'top',
+          labels: {
+            ...chartDefaults.plugins.legend.labels,
+            color: themeColors.textColor
+          }
+        },
+        tooltip: {
+          ...chartDefaults.plugins.tooltip,
+          backgroundColor: themeColors.tooltipBg,
+          titleColor: themeColors.tooltipTitle,
+          bodyColor: themeColors.tooltipBody,
+          borderColor: themeColors.tooltipBorder,
+          callbacks: {
+            label: getQuarterlyTooltipLabel
+          }
+        }
+      }
+    }
+  });
+}
+
+function renderSalesProjectionCard() {
+  const proj = getSalesProjection(currentYear, currentMonth);
+
+  // Subtitle
+  const subEl = $('#projection-subtitle');
+  if (subEl) {
+    subEl.textContent = `Objetivo base: Superar récord de 2025 (${formatCurrency(proj.targetBase)}) con meta extendida (+10%)`;
+  }
+
+  // 1. Metric: Ventas Acumuladas YTD
+  animateCount($('#proj-current-sales'), proj.total2026YTD, formatCurrency);
+  const currentSub = $('#proj-current-sub');
+  if (currentSub) {
+    currentSub.textContent = `Ene - ${getMonthNameShort(proj.elapsedMonths)} ${currentYear} (${proj.elapsedMonths} meses)`;
+  }
+
+  // 2. Metric: Meta Objetivo 2026
+  animateCount($('#proj-target-goal'), proj.targetStretch, formatCurrency);
+  const targetSub = $('#proj-target-sub');
+  if (targetSub) {
+    targetSub.textContent = `Récord 2025 + 10% de crecimiento`;
+  }
+
+  // 3. Metric: Proyección a Diciembre
+  animateCount($('#proj-forecast-val'), proj.projectedTotal, formatCurrency);
+  const forecastSub = $('#proj-forecast-sub');
+  if (forecastSub) {
+    const sign = proj.projectedVs2025Pct >= 0 ? '+' : '';
+    forecastSub.textContent = `${sign}${proj.projectedVs2025Pct.toFixed(1)}% vs cierre 2025`;
+    forecastSub.style.color = proj.projectedVs2025Pct >= 0 ? 'var(--success)' : 'var(--danger)';
+  }
+
+  // 4. Metric: Faltante para la Meta
+  const isGoalReached = proj.total2026YTD >= proj.targetStretch;
+  const isRecordReached = proj.total2026YTD >= proj.targetBase;
+  
+  animateCount($('#proj-gap-val'), isGoalReached ? 0 : proj.gapToStretch, formatCurrency);
+  const gapSub = $('#proj-gap-sub');
+  if (gapSub) {
+    if (isGoalReached) {
+      gapSub.textContent = '¡Meta del año 100% superada!';
+      gapSub.style.color = 'var(--success)';
+    } else if (isRecordReached) {
+      gapSub.textContent = '¡Récord 2025 superado! Faltante para meta +10%';
+      gapSub.style.color = '#3B82F6';
+    } else {
+      gapSub.textContent = `Faltan ${formatCurrency(proj.gapToBase)} para récord 2025`;
+    }
+  }
+
+  // Progress Bar & Percentage
+  const progressPctEl = $('#proj-progress-pct');
+  if (progressPctEl) {
+    animateCount(progressPctEl, proj.progressBasePct, (v) => `${(v || 0).toFixed(1)}%`);
+  }
+
+  const barFill = $('#proj-progress-bar-fill');
+  if (barFill) {
+    const visualWidth = Math.min(100, Math.max(0, proj.progressBasePct));
+    barFill.style.width = `${visualWidth}%`;
+  }
+
+  // Scale labels below bar
+  const scale2024 = $('#proj-scale-2024');
+  if (scale2024) scale2024.textContent = `2024: ${formatCurrency(proj.total2024)}`;
+  const scale2025 = $('#proj-scale-2025');
+  if (scale2025) scale2025.textContent = `Récord 2025: ${formatCurrency(proj.targetBase)} (100%)`;
+  const scaleGoal = $('#proj-scale-goal');
+  if (scaleGoal) scaleGoal.textContent = `Meta +10%: ${formatCurrency(proj.targetStretch)}`;
+
+  // Status Badge in Header
+  const statusBadge = $('#projection-status-badge');
+  if (statusBadge) {
+    if (proj.progressBasePct >= 100) {
+      statusBadge.innerHTML = `<span class="type-badge" style="background: rgba(16, 185, 129, 0.18); color: #10B981; font-weight: 700; padding: 5px 12px; font-size: 0.8rem; border: 1px solid rgba(16, 185, 129, 0.3);">🏆 ¡Récord 2025 Superado!</span>`;
+    } else if (proj.progressBasePct >= 80) {
+      statusBadge.innerHTML = `<span class="type-badge" style="background: rgba(59, 130, 246, 0.18); color: #3B82F6; font-weight: 700; padding: 5px 12px; font-size: 0.8rem; border: 1px solid rgba(59, 130, 246, 0.3);">🔥 Ritmo Excelente (${proj.progressBasePct.toFixed(1)}%)</span>`;
+    } else {
+      statusBadge.innerHTML = `<span class="type-badge" style="background: rgba(245, 158, 11, 0.18); color: #F59E0B; font-weight: 700; padding: 5px 12px; font-size: 0.8rem; border: 1px solid rgba(245, 158, 11, 0.3);">⚡ En Progreso (${proj.progressBasePct.toFixed(1)}%)</span>`;
+    }
+  }
+
+  // Motivational Diagnosis Banner
+  const diagBanner = $('#proj-diagnosis-banner');
+  if (diagBanner) {
+    if (proj.progressBasePct >= 100) {
+      diagBanner.style.background = 'rgba(16, 185, 129, 0.12)';
+      diagBanner.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+      diagBanner.innerHTML = `
+        <span style="font-size: 1.1rem;">🎉</span>
+        <div>
+          <strong>¡Año extraordinario!</strong> Ya superaste las ventas totales de todo el 2025. Al ritmo actual, se proyecta un cierre de <strong>${formatCurrency(proj.projectedTotal)}</strong> (+${proj.projectedVs2025Pct.toFixed(1)}% de crecimiento anual).
+        </div>
+      `;
+    } else {
+      diagBanner.style.background = 'rgba(59, 130, 246, 0.08)';
+      diagBanner.style.borderColor = 'rgba(59, 130, 246, 0.25)';
+      diagBanner.innerHTML = `
+        <span style="font-size: 1.1rem;">📊</span>
+        <div>
+          <strong>Diagnóstico comercial:</strong> Con un promedio mensual de <strong>${formatCurrency(proj.avgMonthlyYTD)}</strong>, estás a solo <strong>${formatCurrency(proj.gapToBase)}</strong> de superar el récord total de 2025. Se proyecta un cierre a Diciembre de <strong>${formatCurrency(proj.projectedTotal)}</strong> (<span style="color: var(--success); font-weight: 700;">+${proj.projectedVs2025Pct.toFixed(1)}%</span> vs 2025).
+        </div>
+      `;
+    }
+  }
+}
+
+

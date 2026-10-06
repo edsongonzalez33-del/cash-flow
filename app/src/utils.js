@@ -36,6 +36,17 @@ export function formatCurrency(amount) {
 }
 
 /**
+ * Format a number as Bolívares (Bs.)
+ */
+export function formatBs(amount) {
+  const num = parseFloat(amount || 0);
+  return 'Bs. ' + num.toLocaleString('es-VE', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+}
+
+/**
  * Format a date string (YYYY-MM-DD) to localized display
  */
 export function formatDate(dateStr) {
@@ -177,3 +188,50 @@ export function todayISO() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
+
+/**
+ * Smoothly animate number changes in a DOM element (rolling count-up)
+ */
+export function animateCount(element, endValue, formatter = formatCurrency, duration = 850) {
+  if (!element) return;
+
+  const target = parseFloat(endValue) || 0;
+  // If element already has animated or displayed a value, use it as start; otherwise start from 0
+  const start = element._currentVal !== undefined ? element._currentVal : 0;
+
+  if (element._animFrameId) {
+    cancelAnimationFrame(element._animFrameId);
+    element._animFrameId = null;
+  }
+
+  // If start is exactly equal to target and text is present, just set
+  if (start === target && element.textContent.trim() !== '') {
+    element.textContent = formatter(target);
+    element._currentVal = target;
+    return;
+  }
+
+  const startTime = performance.now();
+
+  function frame(currentTime) {
+    const elapsed = currentTime - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    
+    // Smooth easeOutExpo for pleasant rolling feel
+    const ease = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
+    const current = start + (target - start) * ease;
+    
+    element.textContent = formatter(current);
+    
+    if (progress < 1) {
+      element._animFrameId = requestAnimationFrame(frame);
+    } else {
+      element.textContent = formatter(target);
+      element._currentVal = target;
+      element._animFrameId = null;
+    }
+  }
+
+  element._animFrameId = requestAnimationFrame(frame);
+}
+
