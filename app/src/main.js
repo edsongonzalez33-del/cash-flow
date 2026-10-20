@@ -55,6 +55,12 @@ async function boot() {
     renderCatalogs();
   });
 
+  // Render immediately with local/cached data
+  renderDashboard();
+  renderExpenses();
+  renderIncomes();
+  renderCatalogs();
+
   // Initialize Supabase Auth
   initAuth(async (user) => {
     showToast('Bienvenido al sistema', 'success');
@@ -119,7 +125,7 @@ function navigateTo(sectionName) {
     dashboard: 'Dashboard | Flujo de Caja',
     expenses: 'Gastos | Flujo de Caja',
     incomes: 'Ingresos | Flujo de Caja',
-    catalogs: 'Catálogos | Flujo de Caja'
+    catalogs: 'Configuración & Catálogos | Flujo de Caja'
   };
   document.title = titles[sectionName] || 'Flujo de Caja';
 }

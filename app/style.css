@@ -1565,3 +1565,66 @@ h1, h2, h3, h4 {
   gap: 8px;
 }
 
+
+
+/* ============================================================
+   Checklist Interactivo de Gastos Fijos (Dashboard & Settings)
+   ============================================================ */
+
+.checklist-filter-pills .fixed-filter-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.checklist-filter-pills .fixed-filter-btn:hover {
+  color: var(--text-primary);
+}
+
+.checklist-filter-pills .fixed-filter-btn.active {
+  background: var(--accent);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.35);
+}
+
+.fixed-checklist-item {
+  position: relative;
+  overflow: hidden;
+}
+
+.fixed-checklist-item:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: rgba(16, 185, 129, 0.45) !important;
+}
+
+.fixed-checklist-item .btn-quick-pay:hover {
+  background: var(--accent) !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.35);
+}
+
+/* Light mode adjustments */
+body.light-mode .checklist-filter-pills {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+body.light-mode .checklist-filter-pills .fixed-filter-btn {
+  color: #64748b;
+}
+
+body.light-mode .checklist-filter-pills .fixed-filter-btn.active {
+  background: var(--accent);
+  color: #ffffff;
+}
+
+body.light-mode .fixed-checklist-item {
+  background: #ffffff;
+}

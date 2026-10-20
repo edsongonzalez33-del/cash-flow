@@ -556,17 +556,56 @@ function migrateAndNormalizeStore(store) {
   return migrated;
 }
 
+export const DEFAULT_FIXED_EXPENSES = [
+  { name: 'Ariadna Yoga', frequency: 'mensual', targetAmount: 30 },
+  { name: 'DGBoss', frequency: 'mensual', targetAmount: 50 },
+  { name: 'Fondo Super Viaje', frequency: 'mensual', targetAmount: 200 },
+  { name: 'Gasolina', frequency: 'mensual', targetAmount: 140 },
+  { name: 'Internet Caracas', frequency: 'mensual', targetAmount: 18 },
+  { name: 'Internet Valencia', frequency: 'mensual', targetAmount: 33 },
+  { name: 'Mercado', frequency: 'mensual', targetAmount: 750 },
+  { name: 'Nómina: Berelitza', frequency: 'quincenal', targetAmount: 180 },
+  { name: 'Nómina: María Hortencia', frequency: 'quincenal', targetAmount: 360 },
+  { name: 'Nómina: Víctor Romero', frequency: 'quincenal', targetAmount: 38 },
+  { name: 'Póliza Ahorro', frequency: 'mensual', targetAmount: 182 },
+  { name: 'Póliza Carlos', frequency: 'mensual', targetAmount: 30 },
+  { name: 'Póliza Corolla', frequency: 'mensual', targetAmount: 56 },
+  { name: 'Póliza Diana', frequency: 'mensual', targetAmount: 220 },
+  { name: 'Póliza Edson', frequency: 'mensual', targetAmount: 167 },
+  { name: 'Póliza Rafael', frequency: 'mensual', targetAmount: 28 },
+  { name: 'Póliza Rosalicia', frequency: 'mensual', targetAmount: 113 },
+  { name: 'Póliza Spark', frequency: 'mensual', targetAmount: 29 },
+  { name: 'Profesor Navas', frequency: 'mensual', targetAmount: 50 },
+  { name: 'Servicios Básicos', frequency: 'mensual', targetAmount: 30 },
+  { name: 'Sra. María', frequency: 'quincenal', targetAmount: 380 }
+];
+
 export const DEFAULT_BENEFICIARIES = ['María Hortencia', 'Luisa Velásquez', 'Freddy', 'Zitiu', 'Esmyll León'];
 
 export function ensureCatalogs(store) {
   if (!store.catalogs) {
-    store.catalogs = { companies: [], concepts: [], beneficiaries: [] };
+    store.catalogs = { companies: [], concepts: [], beneficiaries: [], fixedExpenses: [] };
   }
   if (!Array.isArray(store.catalogs.companies)) store.catalogs.companies = [];
   if (!Array.isArray(store.catalogs.concepts)) store.catalogs.concepts = [];
   if (!Array.isArray(store.catalogs.beneficiaries)) store.catalogs.beneficiaries = [];
+  if (!Array.isArray(store.catalogs.fixedExpenses)) store.catalogs.fixedExpenses = [];
 
   let changed = false;
+
+  // Auto-seed fixed expenses if empty
+  if (store.catalogs.fixedExpenses.length === 0) {
+    for (const item of DEFAULT_FIXED_EXPENSES) {
+      store.catalogs.fixedExpenses.push({
+        id: uuid(),
+        name: item.name,
+        frequency: item.frequency || 'mensual',
+        targetAmount: item.targetAmount || 0,
+        active: true
+      });
+      changed = true;
+    }
+  }
 
   // Auto-seed companies from historical records if catalogs.companies is empty
   if (store.catalogs.companies.length === 0 && store.incomes) {
@@ -629,7 +668,7 @@ export function getStore() {
   } catch (e) {
     console.error('Error reading store:', e);
   }
-  const defaultStore = { expenses: {}, incomes: {}, catalogs: { companies: [], concepts: [], beneficiaries: [] } };
+  const defaultStore = { expenses: {}, incomes: {}, catalogs: { companies: [], concepts: [], beneficiaries: [], fixedExpenses: [] } };
   ensureCatalogs(defaultStore);
   return defaultStore;
 }
@@ -1305,22 +1344,43 @@ export function getQuarterlySales(years = [2024, 2025, 2026]) {
 }
 
 export function getSalesProjection(year = 2026, month = 10) {
-  const qData = getQuarterlySales([2024, 2025, 2026]);
+  const store = getStore();
 
-  const total2024 = qData[2024]?.total || 0;
-  const total2025 = qData[2025]?.total || 0;
-  const total2026YTD = qData[2026]?.total || 0;
+  // Helper to compute Net Operating Income (Incomes minus Variable Expenses) for a full year or up to maxMonth
+  const getNetOperatingIncomeForPeriod = (y, maxM = 12) => {
+    let incTotal = 0;
+    let varExpTotal = 0;
+    for (let m = 1; m <= maxM; m++) {
+      const k = monthKey(y, m);
+      const incList = store.incomes[k] || [];
+      const expList = store.expenses[k] || [];
+      incTotal += incList.reduce((acc, i) => acc + (parseFloat(i.amount) || 0), 0);
+      varExpTotal += expList.filter(e => (e.type || '').toLowerCase() === 'variable').reduce((acc, e) => acc + (parseFloat(e.amount) || 0), 0);
+    }
+    return {
+      incTotal,
+      varExpTotal,
+      netOperating: incTotal - varExpTotal
+    };
+  };
+
+  const period2024 = getNetOperatingIncomeForPeriod(2024, 12);
+  const period2025 = getNetOperatingIncomeForPeriod(2025, 12);
+
+  const elapsedMonths = Math.max(1, Math.min(12, month));
+  const period2026 = getNetOperatingIncomeForPeriod(year, elapsedMonths);
+
+  const total2024 = period2024.netOperating;
+  const total2025 = period2025.netOperating;
+  const total2026YTD = period2026.netOperating;
 
   // Base target is beating previous year (2025); stretch goal is +10%
   const targetBase = total2025 > 0 ? total2025 : (total2024 > 0 ? total2024 * 1.15 : 50000);
   const targetStretch = targetBase * 1.10; // +10% growth goal
 
-  // Number of elapsed months up to current month (e.g. October = 10 months)
-  const elapsedMonths = Math.max(1, Math.min(12, month));
   const avgMonthlyYTD = elapsedMonths > 0 ? (total2026YTD / elapsedMonths) : 0;
 
-  // Forecast projection to end of year:
-  // Current YTD + (monthly pace * remaining months)
+  // Forecast projection to end of year: Current YTD Net + (monthly average pace * remaining months)
   const remainingMonths = Math.max(0, 12 - elapsedMonths);
   const projectedTotal = total2026YTD + (avgMonthlyYTD * remainingMonths);
 
@@ -1337,6 +1397,8 @@ export function getSalesProjection(year = 2026, month = 10) {
     total2024,
     total2025,
     total2026YTD,
+    grossIncomesYTD: period2026.incTotal,
+    variableExpensesYTD: period2026.varExpTotal,
     targetBase,
     targetStretch,
     projectedTotal,
@@ -1544,6 +1606,199 @@ export async function deleteCatalogItem(type, id) {
     return true;
   }
   return false;
+}
+
+
+export function getFixedExpenses() {
+  const store = getStore();
+  return (store.catalogs && Array.isArray(store.catalogs.fixedExpenses)) ? store.catalogs.fixedExpenses : [];
+}
+
+export async function addFixedExpense(expenseData) {
+  const { data: { session } } = await supabase.auth.getSession();
+  const store = getStore();
+  if (!store.catalogs) store.catalogs = { companies: [], concepts: [], beneficiaries: [], fixedExpenses: [] };
+  if (!Array.isArray(store.catalogs.fixedExpenses)) store.catalogs.fixedExpenses = [];
+
+  const name = (expenseData.name || '').trim();
+  if (!name) throw new Error('El nombre del gasto fijo no puede estar vacío');
+
+  const newItem = {
+    id: uuid(),
+    name,
+    frequency: (expenseData.frequency || 'mensual').toLowerCase(),
+    targetAmount: parseFloat(expenseData.targetAmount || 0),
+    active: expenseData.active !== false
+  };
+
+  store.catalogs.fixedExpenses.push(newItem);
+  saveStore(store);
+
+  if (session) {
+    await pushCatalogsToCloud(store.catalogs);
+  }
+
+  window.dispatchEvent(new CustomEvent('data-changed'));
+  return newItem;
+}
+
+export async function updateFixedExpense(id, updates) {
+  const { data: { session } } = await supabase.auth.getSession();
+  const store = getStore();
+  const list = (store.catalogs && store.catalogs.fixedExpenses) || [];
+  const item = list.find(i => i.id === id);
+  if (!item) throw new Error('Gasto fijo no encontrado');
+
+  if (updates.name !== undefined) item.name = updates.name.trim();
+  if (updates.frequency !== undefined) item.frequency = (updates.frequency || 'mensual').toLowerCase();
+  if (updates.targetAmount !== undefined) item.targetAmount = parseFloat(updates.targetAmount || 0);
+  if (updates.active !== undefined) item.active = !!updates.active;
+
+  saveStore(store);
+
+  if (session) {
+    await pushCatalogsToCloud(store.catalogs);
+  }
+
+  window.dispatchEvent(new CustomEvent('data-changed'));
+  return item;
+}
+
+export async function deleteFixedExpense(id) {
+  const { data: { session } } = await supabase.auth.getSession();
+  const store = getStore();
+  const list = (store.catalogs && store.catalogs.fixedExpenses) || [];
+  const idx = list.findIndex(i => i.id === id);
+  if (idx !== -1) {
+    list.splice(idx, 1);
+    saveStore(store);
+
+    if (session) {
+      await pushCatalogsToCloud(store.catalogs);
+    }
+
+    window.dispatchEvent(new CustomEvent('data-changed'));
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Calculates current month status for all active fixed expenses
+ * Matches registered expenses in the given month by normalized concept name
+ */
+export function getFixedExpensesStatus(year, month) {
+  const fixedList = getFixedExpenses().filter(f => f.active !== false);
+  const expenses = getExpenses(year, month);
+
+  // Group registered expenses by lowercase normalized concept
+  const registeredByConcept = new Map();
+  for (const exp of expenses) {
+    const conceptKey = (exp.concept || '').trim().toLowerCase();
+    if (!registeredByConcept.has(conceptKey)) {
+      registeredByConcept.set(conceptKey, []);
+    }
+    registeredByConcept.get(conceptKey).push(exp);
+  }
+
+  let totalItems = fixedList.length;
+  let paidItemsCount = 0;
+  let totalTarget = 0;
+  let totalPaidAmount = 0;
+  let totalPendingEstimated = 0;
+
+  const items = fixedList.map(fixed => {
+    const fKey = (fixed.name || '').trim().toLowerCase();
+    // Match exact or fuzzy (e.g. if expense concept contains fixed name or vice versa)
+    let matchedExpenses = [];
+    for (const [cKey, list] of registeredByConcept.entries()) {
+      if (cKey === fKey || (fKey.length > 4 && (cKey.includes(fKey) || fKey.includes(cKey)))) {
+        matchedExpenses = matchedExpenses.concat(list);
+      }
+    }
+
+    const count = matchedExpenses.length;
+    const paidAmount = matchedExpenses.reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0);
+    const targetAmount = parseFloat(fixed.targetAmount || 0);
+    const frequency = fixed.frequency || 'mensual';
+
+    let isFullyPaid = false;
+    let statusLabel = 'Pendiente';
+    let progressNote = '';
+
+    if (frequency === 'quincenal') {
+      if (count >= 2) {
+        isFullyPaid = true;
+        statusLabel = 'Completado';
+        progressNote = '2 de 2 pagos';
+      } else if (count === 1) {
+        statusLabel = 'Parcial';
+        progressNote = '1 de 2 pagos';
+      } else {
+        statusLabel = 'Pendiente';
+        progressNote = '0 de 2 pagos';
+      }
+    } else {
+      // Mensual
+      if (count >= 1) {
+        isFullyPaid = true;
+        statusLabel = 'Pagado';
+        progressNote = count === 1 ? '1 pago' : (count + ' pagos');
+      } else {
+        statusLabel = 'Pendiente';
+        progressNote = '0 pagos';
+      }
+    }
+
+    if (isFullyPaid) {
+      paidItemsCount++;
+    }
+
+    totalTarget += targetAmount;
+    totalPaidAmount += paidAmount;
+    if (!isFullyPaid) {
+      const remainingTarget = targetAmount > paidAmount ? (targetAmount - paidAmount) : 0;
+      totalPendingEstimated += remainingTarget;
+    }
+
+    // Collect payment dates formatted
+    const paymentDates = matchedExpenses.map(e => e.date).filter(Boolean).sort();
+
+    return {
+      id: fixed.id,
+      name: fixed.name,
+      frequency,
+      targetAmount,
+      paidAmount,
+      count,
+      isFullyPaid,
+      statusLabel,
+      progressNote,
+      paymentDates,
+      matchedExpenses
+    };
+  });
+
+  // Sort: pending first, then by name
+  items.sort((a, b) => {
+    if (a.isFullyPaid !== b.isFullyPaid) {
+      return a.isFullyPaid ? 1 : -1;
+    }
+    return a.name.localeCompare(b.name);
+  });
+
+  const completionPct = totalItems > 0 ? Math.round((paidItemsCount / totalItems) * 100) : 0;
+
+  return {
+    items,
+    totalItems,
+    paidItemsCount,
+    pendingItemsCount: totalItems - paidItemsCount,
+    completionPct,
+    totalTarget,
+    totalPaidAmount,
+    totalPendingEstimated
+  };
 }
 
 export function getCatalogUsageStats() {

@@ -11,11 +11,12 @@ import {
 import {
   getMonthTotals, getExpensesByConceptForMonth, getIncomesByCompanyForMonth,
   getRecentTransactions, getExpenses, getPendingCommissions, payCommission, getPaidCommissions,
-  getQuarterlySales, getSalesProjection
+  getQuarterlySales, getSalesProjection, getFixedExpensesStatus
 } from './store.js';
+import { openExpenseModal } from './expenses.js';
 import {
   formatCurrency, formatBs, formatDate, formatMonthLabel, getMonthNameShort,
-  navigateMonth, getLastNMonthKeys, parseMonthKey, percentChange, $,
+  navigateMonth, getLastNMonthKeys, parseMonthKey, percentChange, $, $$,
   CHART_COLORS, showToast, animateCount
 } from './utils.js';
 import { fetchBcvRate } from './bcvService.js';
@@ -38,6 +39,7 @@ let chartQuarterlySales = null;
 
 let currentYear, currentMonth;
 let onMonthChange = null;
+let fixedChecklistFilter = 'all'; // 'all' | 'pending' | 'paid'
 let currentCommissionTab = 'pending';
 
 function getChartColors() {
@@ -107,6 +109,27 @@ export function initDashboard(year, month, onMonthChangeCb) {
     if (onMonthChange) onMonthChange(currentYear, currentMonth);
   });
 
+  // Fixed expenses checklist filter pills
+  $$('.fixed-filter-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const filter = btn.dataset.filter || 'all';
+      fixedChecklistFilter = filter;
+      $$('.fixed-filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      renderFixedExpensesChecklist();
+    });
+  });
+
+  // Button to navigate to configuration
+  const btnGotoConfig = $('#btn-goto-fixed-settings');
+  if (btnGotoConfig) {
+    btnGotoConfig.addEventListener('click', () => {
+      const catalogsNav = $('[data-section="catalogs"]');
+      if (catalogsNav) catalogsNav.click();
+    });
+  }
+
   // Commission tab navigation
   $('#btn-tab-pending').addEventListener('click', () => {
     currentCommissionTab = 'pending';
@@ -152,6 +175,7 @@ export function renderDashboard() {
   renderPendingCommissions();
   renderCommissionsDestinatarioChart();
   renderPerformanceCompareChart();
+  renderFixedExpensesChecklist();
   renderSalesProjectionCard();
   renderQuarterlySalesChart();
 }
@@ -1199,14 +1223,14 @@ function renderSalesProjectionCard() {
   // Subtitle
   const subEl = $('#projection-subtitle');
   if (subEl) {
-    subEl.textContent = `Objetivo base: Superar récord de 2025 (${formatCurrency(proj.targetBase)}) con meta extendida (+10%)`;
+    subEl.textContent = `Ingresos Netos Operativos (Ingresos menos Gastos Variables). Récord 2025: ${formatCurrency(proj.targetBase)}`;
   }
 
   // 1. Metric: Ventas Acumuladas YTD
   animateCount($('#proj-current-sales'), proj.total2026YTD, formatCurrency);
   const currentSub = $('#proj-current-sub');
   if (currentSub) {
-    currentSub.textContent = `Ene - ${getMonthNameShort(proj.elapsedMonths)} ${currentYear} (${proj.elapsedMonths} meses)`;
+    currentSub.textContent = `Ingresos ${formatCurrency(proj.grossIncomesYTD)} - Var ${formatCurrency(proj.variableExpensesYTD)}`;
   }
 
   // 2. Metric: Meta Objetivo 2026
@@ -1257,9 +1281,9 @@ function renderSalesProjectionCard() {
 
   // Scale labels below bar
   const scale2024 = $('#proj-scale-2024');
-  if (scale2024) scale2024.textContent = `2024: ${formatCurrency(proj.total2024)}`;
+  if (scale2024) scale2024.textContent = `Neto 2024: ${formatCurrency(proj.total2024)}`;
   const scale2025 = $('#proj-scale-2025');
-  if (scale2025) scale2025.textContent = `Récord 2025: ${formatCurrency(proj.targetBase)} (100%)`;
+  if (scale2025) scale2025.textContent = `Neto 2025: ${formatCurrency(proj.targetBase)} (100%)`;
   const scaleGoal = $('#proj-scale-goal');
   if (scaleGoal) scaleGoal.textContent = `Meta +10%: ${formatCurrency(proj.targetStretch)}`;
 
@@ -1301,3 +1325,170 @@ function renderSalesProjectionCard() {
 }
 
 
+
+
+/**
+ * Render the Fixed Expenses Checklist widget in the dashboard
+ */
+function renderFixedExpensesChecklist() {
+  const status = getFixedExpensesStatus(currentYear, currentMonth);
+  const grid = $('#fixed-checklist-grid');
+  if (!grid) return;
+
+  // Header badges & metrics
+  const badgeEl = $('#fixed-checklist-badge');
+  if (badgeEl) {
+    if (status.totalItems === 0) {
+      badgeEl.textContent = 'Sin gastos configurados';
+      badgeEl.className = 'badge badge-secondary';
+    } else if (status.pendingItemsCount === 0) {
+      badgeEl.textContent = '¡100% al día!';
+      badgeEl.className = 'badge badge-info';
+    } else {
+      badgeEl.textContent = `${status.pendingItemsCount} pendientes`;
+      badgeEl.className = 'badge badge-fixed';
+    }
+  }
+
+  // Filter counters
+  const countAll = $('#fixed-count-all');
+  if (countAll) countAll.textContent = status.totalItems;
+  const countPending = $('#fixed-count-pending');
+  if (countPending) countPending.textContent = status.pendingItemsCount;
+  const countPaid = $('#fixed-count-paid');
+  if (countPaid) countPaid.textContent = status.paidItemsCount;
+
+  // Progress numbers
+  const progCount = $('#fixed-progress-count');
+  if (progCount) progCount.textContent = `(${status.paidItemsCount} de ${status.totalItems} pagados)`;
+  const totalPaidEl = $('#fixed-total-paid');
+  if (totalPaidEl) totalPaidEl.textContent = formatCurrency(status.totalPaidAmount);
+  const totalPendingEl = $('#fixed-total-pending');
+  if (totalPendingEl) totalPendingEl.textContent = formatCurrency(status.totalPendingEstimated);
+  const pctEl = $('#fixed-progress-pct');
+  if (pctEl) pctEl.textContent = `${status.completionPct}%`;
+
+  const barFill = $('#fixed-progress-bar-fill');
+  if (barFill) {
+    barFill.style.width = `${status.completionPct}%`;
+    if (status.completionPct === 100) {
+      barFill.style.background = 'linear-gradient(90deg, #10B981, #059669)';
+    } else if (status.completionPct >= 50) {
+      barFill.style.background = 'linear-gradient(90deg, #10B981, #06B6D4)';
+    } else {
+      barFill.style.background = 'linear-gradient(90deg, #F59E0B, #10B981)';
+    }
+  }
+
+  // Filter displayed items
+  let itemsToDisplay = status.items;
+  if (fixedChecklistFilter === 'pending') {
+    itemsToDisplay = status.items.filter(i => !i.isFullyPaid);
+  } else if (fixedChecklistFilter === 'paid') {
+    itemsToDisplay = status.items.filter(i => i.isFullyPaid);
+  }
+
+  if (itemsToDisplay.length === 0) {
+    grid.innerHTML = `
+      <div style="grid-column: 1 / -1; text-align: center; padding: 28px; background: rgba(255,255,255,0.02); border-radius: var(--radius-md); border: 1px dashed var(--border-subtle); color: var(--text-muted);">
+        <p style="margin: 0; font-size: 0.92rem;">
+          ${fixedChecklistFilter === 'pending' ? '🎉 ¡Excelente! No tienes gastos fijos pendientes en este mes.' : (fixedChecklistFilter === 'paid' ? 'Aún no has registrado pagos para los gastos fijos este mes.' : 'No hay gastos fijos programados.')}
+        </p>
+      </div>
+    `;
+    return;
+  }
+
+  grid.innerHTML = itemsToDisplay.map(item => {
+    const isPaid = item.isFullyPaid;
+    const isQuincenal = item.frequency === 'quincenal';
+
+    const cardBorder = isPaid 
+      ? 'border: 1px solid rgba(16, 185, 129, 0.4); background: rgba(16, 185, 129, 0.05);' 
+      : 'border: 1px solid var(--border-default); background: var(--bg-card);';
+
+    const checkIcon = isPaid
+      ? `<div style="width: 24px; height: 24px; border-radius: 50%; background: #10B981; color: white; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 800; flex-shrink: 0; box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);">✓</div>`
+      : (item.count > 0 
+          ? `<div style="width: 24px; height: 24px; border-radius: 50%; background: rgba(245, 158, 11, 0.2); border: 2px solid #F59E0B; color: #F59E0B; display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 800; flex-shrink: 0;">1/2</div>`
+          : `<div style="width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--border-default); flex-shrink: 0;"></div>`
+        );
+
+    const freqBadge = isQuincenal
+      ? '<span style="font-size: 0.7rem; font-weight: 700; padding: 2px 7px; border-radius: 99px; background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3);">Quincenal</span>'
+      : '<span style="font-size: 0.7rem; font-weight: 700; padding: 2px 7px; border-radius: 99px; background: rgba(139, 92, 246, 0.15); color: #c084fc; border: 1px solid rgba(139, 92, 246, 0.3);">Mensual</span>';
+
+    const statusBadge = isPaid
+      ? `<span style="font-size: 0.72rem; font-weight: 700; color: #10B981; display: flex; align-items: center; gap: 4px;">${item.statusLabel} (${formatCurrency(item.paidAmount)})</span>`
+      : (item.count > 0 
+          ? `<span style="font-size: 0.72rem; font-weight: 700; color: #F59E0B;">${item.progressNote} • Pagado: ${formatCurrency(item.paidAmount)}</span>`
+          : `<span style="font-size: 0.72rem; font-weight: 600; color: var(--text-muted);">Pendiente (${formatCurrency(item.targetAmount)})</span>`
+        );
+
+    const actionButton = !isPaid 
+      ? `<button type="button" class="btn-quick-pay" data-concept="${escapeHtml(item.name)}" data-amount="${item.targetAmount > 0 ? (isQuincenal ? (item.targetAmount / 2) : item.targetAmount) : ''}" style="padding: 4px 10px; font-size: 0.75rem; border-radius: var(--radius-sm); border: 1px solid rgba(16, 185, 129, 0.4); background: rgba(16, 185, 129, 0.15); color: #34d399; font-weight: 600; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 4px;">
+            <span>+ Pagar</span>
+         </button>`
+      : `<span style="font-size: 0.72rem; color: #10B981; font-weight: 700; opacity: 0.9;">${item.progressNote}</span>`;
+
+    // Format payment dates
+    let datesText = '';
+    if (item.paymentDates && item.paymentDates.length > 0) {
+      if (item.paymentDates.length === 1) {
+        datesText = `📅 ${formatDate(item.paymentDates[0])}`;
+      } else {
+        const days = item.paymentDates.map(d => {
+          const parts = d.split('-');
+          return parts.length === 3 ? `${parts[2]}/${parts[1]}` : d;
+        }).join(', ');
+        datesText = `📅 ${days}`;
+      }
+    }
+
+    const datePill = datesText 
+      ? `<span style="font-size: 0.72rem; color: #10B981; font-weight: 600; background: rgba(16, 185, 129, 0.12); padding: 1px 6px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;" title="Fechas registradas">${datesText}</span>`
+      : '';
+
+    return `
+      <div class="fixed-checklist-item" style="${cardBorder} border-radius: var(--radius-md); padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; transition: transform 0.18s, box-shadow 0.18s;">
+        <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;">
+          <div style="display: flex; align-items: center; gap: 10px; min-width: 0;">
+            ${checkIcon}
+            <div style="min-width: 0;">
+              <div style="font-size: 0.92rem; font-weight: 700; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(item.name)}">
+                ${escapeHtml(item.name)}
+              </div>
+              <div style="margin-top: 3px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                ${freqBadge}
+                ${datePill}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display: flex; align-items: center; justify-content: space-between; border-top: 1px solid var(--border-subtle); padding-top: 8px; margin-top: 2px;">
+          ${statusBadge}
+          ${actionButton}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Bind quick pay buttons to open expense modal prefilled
+  grid.querySelectorAll('.btn-quick-pay').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const concept = btn.dataset.concept;
+      const amount = btn.dataset.amount;
+      const ym = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
+      const dateToUse = `${ym}-01`;
+
+      openExpenseModal({
+        date: dateToUse,
+        concept: concept,
+        amount: amount ? parseFloat(amount) : '',
+        type: 'fijo'
+      });
+    });
+  });
+}

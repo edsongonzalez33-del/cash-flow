@@ -149,7 +149,7 @@ function renderExpensesTable() {
 /**
  * Open the expense modal for add/edit
  */
-function openExpenseModal(expense = null) {
+export function openExpenseModal(expense = null) {
   const isEdit = !!expense;
   const modal = $('#modal');
   const overlay = $('#modal-overlay');
